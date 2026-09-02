@@ -80,6 +80,42 @@ class SettingsScreen(Page):
         GhostButton(row, text=rtl("טעינת גיבוי"), height=42, width=140,
                     command=on_import).pack(side="right", padx=6)
 
+        pending = pending_update if isinstance(pending_update, dict) else {}
+        has_pending = bool(pending.get("newer") and pending.get("latest"))
+        auto_on = bool(storage.get_pref("auto_update_check", True))
+        updates = self._card(
+            "עדכוני תוכנה",
+            "בודקים בגיטהאב אם יצאה גרסה חדשה. ההתקדמות בלימוד לא נמחקת.",
+        )
+        fast_label(updates, f"גרסה מותקנת: {VERSION}", size=13, muted=True, bg=COLORS["card_bg"]).pack(
+            fill="x", pady=(10, 0),
+        )
+        if has_pending:
+            fast_label(
+                updates,
+                f"יש גרסה חדשה: {pending.get('latest')}",
+                size=16, bold=True, bg=COLORS["card_bg"],
+            ).pack(fill="x", pady=(8, 0))
+        if update_status:
+            fast_label(updates, str(update_status), size=13, muted=True, bg=COLORS["card_bg"], wrap=740).pack(
+                fill="x", pady=(6, 0),
+            )
+        row = tk.Frame(updates, bg=COLORS["card_bg"])
+        row.pack(fill="x", pady=(12, 0))
+        ModernButton(row, text=rtl("בדוק עדכון"), height=42, width=150,
+                     command=on_check_update).pack(side="right", padx=6)
+        if has_pending and on_install_update:
+            ModernButton(row, text=rtl("עדכן עכשיו"), height=42, width=150,
+                         command=on_install_update).pack(side="right", padx=6)
+        GhostButton(row, text=rtl("התקנה מקובץ"), height=42, width=150,
+                    command=on_pick_update).pack(side="right", padx=6)
+        self._toggle(
+            updates,
+            "בדיקה אוטומטית בהפעלה: דולקת" if auto_on else "בדיקה אוטומטית בהפעלה: כבויה",
+            auto_on,
+            on_auto_update,
+        )
+
         danger = self._card("התחלה מחדש", "מוחק הרשמה, אבחון והתקדמות מהמחשב הזה.", danger=True)
         ModernButton(
             danger, text=rtl("מחיקת כל הנתונים"), height=46,

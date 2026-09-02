@@ -1,5 +1,10 @@
 # Changelog
 
+## [4.5.1] - 2026-09-03
+
+### Added
+- Settings screen: check for updates, install now, install from a file, and auto-check toggle
+
 ## [4.5.0] - 2026-09-03
 
 ### Added
