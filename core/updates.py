@@ -21,7 +21,7 @@ from core.config import (
 
 log = None
 
-USER_AGENT = f"StudyApp/{VERSION} (+https://github.com/dadshaev/StudyApp)"
+USER_AGENT = f"StudyApp/{VERSION} (+https://github.com/or2005/StudyApp)"
 TIMEOUT = 18
 MAX_DOWNLOAD = 450 * 1024 * 1024
 

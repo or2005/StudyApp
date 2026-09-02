@@ -29,10 +29,10 @@ CONTACT_EMAIL: Final[str] = "dadshaev@gmail.com"
 COPYRIGHT_YEAR: Final[str] = "2026"
 
 # ערוץ עדכונים. כשמפרסמים ב-GitHub Releases, ממלאים את שם המאגר.
-GITHUB_REPO: Final[str] = "dadshaev/StudyApp"
+GITHUB_REPO: Final[str] = "or2005/StudyApp"
 UPDATE_MANIFEST_URLS: Final[tuple[str, ...]] = (
-    "https://raw.githubusercontent.com/dadshaev/StudyApp/main/docs/latest.json",
-    "https://raw.githubusercontent.com/dadshaev/StudyApp/master/docs/latest.json",
+    "https://raw.githubusercontent.com/or2005/StudyApp/main/docs/latest.json",
+    "https://raw.githubusercontent.com/or2005/StudyApp/master/docs/latest.json",
 )
 # פינג אנונימי בהסכמה בלבד. אין שם / גיל / ת״ז.
 TELEMETRY_URL: Final[str] = "https://formsubmit.co/ajax/dadshaev@gmail.com"
