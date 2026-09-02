@@ -1,0 +1,11 @@
+[Desktop Entry]
+Type=Application
+Name=StudyApp
+Name[he]=StudyApp
+Comment=Hebrew study app for Bagrut and Meimad
+Comment[he]=תוכנת לימוד לבגרות ומימ״ד
+Exec=studyapp
+Icon=studyapp
+Terminal=false
+Categories=Education;
+StartupNotify=true

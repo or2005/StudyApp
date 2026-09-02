@@ -1,0 +1,56 @@
+name: Build packages
+
+on:
+  workflow_dispatch:
+  push:
+    tags:
+      - "v*"
+
+jobs:
+  linux-portable:
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Portable tarball
+        run: python tools/build_release.py --linux-portable
+      - uses: actions/upload-artifact@v4
+        with:
+          name: linux-portable
+          path: dist/StudyApp-*-linux-portable.tar.gz
+
+  linux-binary:
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Tkinter
+        run: sudo apt-get update && sudo apt-get install -y python3-tk python3-venv
+      - name: Dependencies
+        run: pip install -r requirements.txt pyinstaller
+      - name: Binary tarball
+        run: python tools/build_release.py --linux-binary
+      - uses: actions/upload-artifact@v4
+        with:
+          name: linux-x86_64
+          path: dist/StudyApp-*-linux-x86_64.tar.gz
+
+  windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Dependencies
+        run: pip install -r requirements.txt
+      - name: Windows zip
+        run: python tools/build_release.py --windows
+      - uses: actions/upload-artifact@v4
+        with:
+          name: windows-x64
+          path: dist/StudyApp-*-windows.zip

@@ -1,0 +1,9 @@
+{
+  "version": "4.5.0",
+  "released": "2026-09-03",
+  "notes": "אייקון חדש, מסך בית מעודכן, והתראות בתוך התוכנה. ההתקדמות בלימוד לא נמחקת.",
+  "windows_setup": "https://github.com/dadshaev/StudyApp/releases/download/v4.5.0/StudyApp-4.5.0-setup.exe",
+  "windows_zip": "https://github.com/dadshaev/StudyApp/releases/download/v4.5.0/StudyApp-4.5.0-windows.zip",
+  "linux_portable": "https://github.com/dadshaev/StudyApp/releases/download/v4.5.0/StudyApp-4.5.0-linux-portable.tar.gz",
+  "page": "https://github.com/dadshaev/StudyApp/releases/tag/v4.5.0"
+}

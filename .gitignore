@@ -1,0 +1,17 @@
+.venv/
+__pycache__/
+*.pyc
+.ruff_cache/
+main.build/
+main.dist/
+main.onefile-build/
+nuitka-crash-report.xml
+data/user_profile.json
+data/user_stats.json
+*.tmp
+.qpanda/
+_qa_report.txt
+_qa_stress_report.txt
+_qa_shots/
+dist/
+build/
