@@ -5,7 +5,10 @@
 ### Fixed
 - English and math no longer reverse on English Windows (punctuation and formulas stay readable)
 - Practice questions explain what is being asked, not only «pick an answer»
-- Short stems like «נרדפת למהיר» and «הניגוד של כהה» are written as full questions
+- Short stems like «נרדפת למהיר», «APPLE זה» and «הניגוד של כהה» are written as full questions
+- Fragments no longer get the confusing wrapper «מה מתאים כאן»
+- «מים» / «מילת» are no longer skipped as if they were already a question
+- Percent prompts read as «כמה הם 25% מ־80?», not backwards «מה 25% הם»
 - Fake options such as «כההון» and a lone letter are removed
 - Meimad reading passages are no longer cut off
 

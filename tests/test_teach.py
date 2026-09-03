@@ -125,6 +125,36 @@ class TeachTests(unittest.TestCase):
         )
         self.assertTrue(clarify_stem({"question": "השלימו: She ___ a cat."}).startswith("השלימו"))
         self.assertIn("החסר", clarify_stem({"question": "She ___ a cat."}))
+        self.assertEqual(
+            clarify_stem({"question": "APPLE זה"}),
+            "מה המשמעות של «APPLE»?",
+        )
+        self.assertEqual(
+            clarify_stem({"question": "מה מתאים כאן: APPLE זה?"}),
+            "מה המשמעות של «APPLE»?",
+        )
+        self.assertEqual(
+            clarify_stem({"question": "מים שפירים הם"}),
+            "מהם מים שפירים?",
+        )
+        self.assertEqual(
+            clarify_stem({"question": "25% מ־80 הם"}),
+            "כמה הם 25% מ־80?",
+        )
+        self.assertEqual(
+            clarify_stem({"question": "מה 25% מ־80 הם?"}),
+            "כמה הם 25% מ־80?",
+        )
+        self.assertNotEqual(
+            clarify_stem({"question": "מילת קישור של סיבה"}),
+            "מילת קישור של סיבה",
+        )
+        self.assertIn("משמעות", clarify_stem({"question": "بيت בערבית זה"}))
+        self.assertTrue(clarify_stem({"question": "also משמש ל"}).startswith("למה"))
+        self.assertEqual(
+            clarify_stem({"question": "מה המשמעות של «APPLE»?"}),
+            "מה המשמעות של «APPLE»?",
+        )
 
     def test_task_prompt_explains_without_leaking_answer(self):
         item = {

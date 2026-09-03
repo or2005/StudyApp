@@ -83,7 +83,7 @@
           "id": "english_אוצר מיל_3",
           "subject": "english",
           "topic": "אוצר מילים",
-          "question": "מה מתאים כאן: APPLE זה?",
+          "question": "מה המשמעות של «APPLE»?",
           "options": [
             "לחם",
             "מים",
@@ -106,7 +106,7 @@
           "id": "english_אוצר מיל_4",
           "subject": "english",
           "topic": "אוצר מילים",
-          "question": "מה מתאים כאן: WATER זה?",
+          "question": "מה המשמעות של «WATER»?",
           "options": [
             "רוח",
             "חול",
@@ -129,7 +129,7 @@
           "id": "english_אוצר מיל_5",
           "subject": "english",
           "topic": "אוצר מילים",
-          "question": "מה מתאים כאן: HAPPY זה?",
+          "question": "מה המשמעות של «HAPPY»?",
           "options": [
             "שמח",
             "איטי",
@@ -152,7 +152,7 @@
           "id": "english_אוצר מיל_6",
           "subject": "english",
           "topic": "אוצר מילים",
-          "question": "מה מתאים כאן: COLD זה?",
+          "question": "מה המשמעות של «COLD»?",
           "options": [
             "חדש",
             "קר",
@@ -175,7 +175,7 @@
           "id": "english_אוצר מיל_7",
           "subject": "english",
           "topic": "אוצר מילים",
-          "question": "מה מתאים כאן: TEACHER זה?",
+          "question": "מה המשמעות של «TEACHER»?",
           "options": [
             "תלמיד",
             "מורה",
@@ -198,7 +198,7 @@
           "id": "english_אוצר מיל_8",
           "subject": "english",
           "topic": "אוצר מילים",
-          "question": "מה מתאים כאן: NIGHT זה?",
+          "question": "מה המשמעות של «NIGHT»?",
           "options": [
             "שבוע",
             "בוקר",
@@ -221,7 +221,7 @@
           "id": "english_אוצר מיל_9",
           "subject": "english",
           "topic": "אוצר מילים",
-          "question": "מה מתאים כאן: BIG זה?",
+          "question": "מה המשמעות של «BIG»?",
           "options": [
             "קטן",
             "איטי",
@@ -244,7 +244,7 @@
           "id": "english_אוצר מיל_10",
           "subject": "english",
           "topic": "אוצר מילים",
-          "question": "מה מתאים כאן: FAST זה?",
+          "question": "מה המשמעות של «FAST»?",
           "options": [
             "מהיר",
             "איטי",
@@ -267,7 +267,7 @@
           "id": "english_אוצר מיל_11",
           "subject": "english",
           "topic": "אוצר מילים",
-          "question": "מה מתאים כאן: FRIEND זה?",
+          "question": "מה המשמעות של «FRIEND»?",
           "options": [
             "שולחן",
             "קיר",
@@ -290,7 +290,7 @@
           "id": "english_אוצר מיל_12",
           "subject": "english",
           "topic": "אוצר מילים",
-          "question": "מה מתאים כאן: BEGIN זה?",
+          "question": "מה המשמעות של «BEGIN»?",
           "options": [
             "לסיים",
             "להתחיל",
@@ -313,7 +313,7 @@
           "id": "english_אוצר מיל_13",
           "subject": "english",
           "topic": "אוצר מילים",
-          "question": "מה מתאים כאן: DIFFICULT זה?",
+          "question": "מה המשמעות של «DIFFICULT»?",
           "options": [
             "קצר תמיד",
             "ריק",
@@ -336,7 +336,7 @@
           "id": "english_אוצר מיל_14",
           "subject": "english",
           "topic": "אוצר מילים",
-          "question": "מה מתאים כאן: ALWAYS זה?",
+          "question": "מה המשמעות של «ALWAYS»?",
           "options": [
             "לפעמים בלבד",
             "אף פעם",
@@ -359,7 +359,7 @@
           "id": "english_אוצר מיל_15",
           "subject": "english",
           "topic": "אוצר מילים",
-          "question": "מה מתאים כאן: BECAUSE זה?",
+          "question": "מה המשמעות של «BECAUSE»?",
           "options": [
             "אחרי",
             "כי / משום ש",
@@ -382,7 +382,7 @@
           "id": "english_אוצר מיל_16",
           "subject": "english",
           "topic": "אוצר מילים",
-          "question": "מה מתאים כאן: SIGNIFICANT זה?",
+          "question": "מה המשמעות של «SIGNIFICANT»?",
           "options": [
             "קטן תמיד",
             "רעש בלבד",
@@ -405,7 +405,7 @@
           "id": "english_אוצר מיל_17",
           "subject": "english",
           "topic": "אוצר מילים",
-          "question": "מה מתאים כאן: THEREFORE זה?",
+          "question": "מה המשמעות של «THEREFORE»?",
           "options": [
             "לכן",
             "בתוך",
@@ -428,7 +428,7 @@
           "id": "english_אוצר מיל_18",
           "subject": "english",
           "topic": "אוצר מילים",
-          "question": "מה מתאים כאן: ALTHOUGH זה?",
+          "question": "מה המשמעות של «ALTHOUGH»?",
           "options": [
             "למרות ש",
             "לכן",
@@ -451,7 +451,7 @@
           "id": "english_אוצר מיל_19",
           "subject": "english",
           "topic": "אוצר מילים",
-          "question": "מה מתאים כאן: RELIABLE זה?",
+          "question": "מה המשמעות של «RELIABLE»?",
           "options": [
             "זול",
             "מהיר תמיד",
@@ -474,7 +474,7 @@
           "id": "english_אוצר מיל_20",
           "subject": "english",
           "topic": "אוצר מילים",
-          "question": "מה מתאים כאן: EVIDENCE זה?",
+          "question": "מה המשמעות של «EVIDENCE»?",
           "options": [
             "ראיה / הוכחה",
             "כותרת",
@@ -497,7 +497,7 @@
           "id": "english_אוצר מיל_21",
           "subject": "english",
           "topic": "אוצר מילים",
-          "question": "מה מתאים כאן: NEVERTHELESS זה?",
+          "question": "מה המשמעות של «NEVERTHELESS»?",
           "options": [
             "בגלל",
             "לכן תמיד",
@@ -595,7 +595,7 @@
           "id": "english_זמנים בס_4",
           "subject": "english",
           "topic": "זמנים בסיסיים",
-          "question": "בחרו את המשפט בעבר",
+          "question": "בחרו את המשפט בעבר?",
           "options": [
             "They will play.",
             "They playing.",
@@ -687,7 +687,7 @@
           "id": "english_זמנים בס_8",
           "subject": "english",
           "topic": "זמנים בסיסיים",
-          "question": "בחרו את הביטוי או את המשפט שמתאים ל: The past of HAVE is",
+          "question": "מה צורת העבר של HAVE?",
           "options": [
             "has",
             "haved",
@@ -710,7 +710,7 @@
           "id": "english_זמנים בס_9",
           "subject": "english",
           "topic": "זמנים בסיסיים",
-          "question": "Do they like tea? תשובה קצרה חיובית",
+          "question": "מה Do they like tea? תשובה קצרה חיובית?",
           "options": [
             "Yes, they does.",
             "Yes, they did not.",
@@ -992,7 +992,7 @@
           "id": "english_משפטים ו_1",
           "subject": "english",
           "topic": "משפטים ומבנה",
-          "question": "מה מתאים כאן: הסדר הנכון?",
+          "question": "איזו אפשרות היא הסדר הנכון?",
           "options": [
             "Apples I like is.",
             "I like apples.",
@@ -1015,7 +1015,7 @@
           "id": "english_משפטים ו_2",
           "subject": "english",
           "topic": "משפטים ומבנה",
-          "question": "מה מתאים כאן: שאלה נכונה?",
+          "question": "איזו אפשרות היא שאלה נכונה?",
           "options": [
             "You do play tennis?",
             "Play you tennis?",
@@ -1268,7 +1268,7 @@
           "id": "english_משפטים ו_13",
           "subject": "english",
           "topic": "משפטים ומבנה",
-          "question": "בחרו את הביטוי או את המשפט שמתאים ל: The opposite of NEVER is",
+          "question": "מה ההפך באנגלית של NEVER?",
           "options": [
             "always",
             "never more",
@@ -1389,7 +1389,7 @@
           "id": "english_הבנת משפ_4",
           "subject": "english",
           "topic": "הבנת משפט",
-          "question": "Dan can swim but he cannot dive. דן",
+          "question": "מה Dan can swim but he cannot dive. דן?",
           "options": [
             "לא יודע כלום",
             "רק צולל",
@@ -1458,7 +1458,7 @@
           "id": "english_הבנת משפ_7",
           "subject": "english",
           "topic": "הבנת משפט",
-          "question": "מה מתאים כאן: No parking here. המשמעות?",
+          "question": "מה No parking here. המשמעות?",
           "options": [
             "חניה חינם",
             "אסור לחנות כאן",
@@ -1481,7 +1481,7 @@
           "id": "english_הבנת משפ_8",
           "subject": "english",
           "topic": "הבנת משפט",
-          "question": "מה מתאים כאן: Please speak slowly. הבקשה?",
+          "question": "מה Please speak slowly. הבקשה?",
           "options": [
             "לרוץ",
             "לצעוק",
@@ -1504,7 +1504,7 @@
           "id": "english_הבנת משפ_9",
           "subject": "english",
           "topic": "הבנת משפט",
-          "question": "He almost missed the bus. כמעט",
+          "question": "מה He almost missed the bus. כמעט?",
           "options": [
             "פספס את האוטובוס",
             "אהב את האוטובוס",
@@ -1527,7 +1527,7 @@
           "id": "english_הבנת משפ_10",
           "subject": "english",
           "topic": "הבנת משפט",
-          "question": "She used to live in Haifa. המשמעות",
+          "question": "מה She used to live in Haifa. המשמעות?",
           "options": [
             "אף פעם לא גרה שם",
             "בעבר גרה בחיפה",
@@ -1550,7 +1550,7 @@
           "id": "english_הבנת משפ_11",
           "subject": "english",
           "topic": "הבנת משפט",
-          "question": "If it rains, we will stay home. אם ירד גשם",
+          "question": "מה If it rains, we will stay home. אם ירד גשם?",
           "options": [
             "נישאר בבית",
             "נעוף",
@@ -1573,7 +1573,7 @@
           "id": "english_הבנת משפ_12",
           "subject": "english",
           "topic": "הבנת משפט",
-          "question": "בחרו את הביטוי או את המשפט שמתאים ל: The opposite of empty is",
+          "question": "מה ההפך באנגלית של empty?",
           "options": [
             "open",
             "full",
@@ -2419,7 +2419,7 @@
           "id": "english_קריאה קצ_10",
           "subject": "english",
           "topic": "קריאה קצרה 2",
-          "question": "Please keep the door closed. הבקשה",
+          "question": "מה Please keep the door closed. הבקשה?",
           "options": [
             "לשבור את הדלת",
             "להשאיר את הדלת סגורה",
@@ -2615,7 +2615,7 @@
           "id": "english_L9_1",
           "subject": "english",
           "topic": "Bagrut 3 units, what's on the exam",
-          "question": "רמת 3 יח״ל באנגלית מיושרת בערך ל",
+          "question": "השלימו: רמת 3 יח״ל באנגלית מיושרת בערך ל ____",
           "options": [
             "C1 רק אוניברסיטה",
             "C2 שפת אם",
@@ -2638,7 +2638,7 @@
           "id": "english_L9_2",
           "subject": "english",
           "topic": "Bagrut 3 units, what's on the exam",
-          "question": "מה מודולי 3 יח״ל הם?",
+          "question": "מהם מודולי 3 יח״ל?",
           "options": [
             "E ו־F בלבד",
             "רק G",
@@ -2661,7 +2661,7 @@
           "id": "english_L9_3",
           "subject": "english",
           "topic": "Bagrut 3 units, what's on the exam",
-          "question": "מה מתאים כאן: במימ״ד באנגלית בודקים?",
+          "question": "מה במימ״ד באנגלית בודקים?",
           "options": [
             "השלמת משפטים והבנת הנקרא",
             "ספרות שייקספיר",
@@ -2684,7 +2684,7 @@
           "id": "english_L9_4",
           "subject": "english",
           "topic": "Bagrut 3 units, what's on the exam",
-          "question": "מה מתאים כאן: כתיבה במודול C היא בערך?",
+          "question": "מה כתיבה במודול C היא בערך?",
           "options": [
             "70-90 מילים",
             "500 מילים חובה",
@@ -2707,7 +2707,7 @@
           "id": "english_L9_5",
           "subject": "english",
           "topic": "Bagrut 3 units, what's on the exam",
-          "question": "מה מתאים כאן: Band I/II זה?",
+          "question": "מה המשמעות של «Band I/II»?",
           "options": [
             "שמות מודולים",
             "רמות אוצר מילים בתוכנית",
@@ -2730,7 +2730,7 @@
           "id": "english_L9_6",
           "subject": "english",
           "topic": "Bagrut 3 units, what's on the exam",
-          "question": "מה מתאים כאן: קודם סוגרים פער ב?",
+          "question": "השלימו: קודם סוגרים פער ב ____",
           "options": [
             "רק שירה",
             "רק משפטים משפטיים",
@@ -2753,7 +2753,7 @@
           "id": "english_L9_7",
           "subject": "english",
           "topic": "Bagrut 3 units, what's on the exam",
-          "question": "מה מתאים כאן: בעל־פה ב־3 יח״ל הוא בדרך כלל?",
+          "question": "מה בעל־פה ב־3 יח״ל הוא בדרך כלל?",
           "options": [
             "רק מאל״ו",
             "בחינה פנימית בבית הספר",
@@ -2874,7 +2874,7 @@
           "id": "english_L10_5",
           "subject": "english",
           "topic": "Meimad, sentence completion",
-          "question": "בחרו את הביטוי או את המשפט שמתאים ל: The opposite of INCREASE is",
+          "question": "מה ההפך באנגלית של INCREASE?",
           "options": [
             "decrease",
             "improve",
@@ -2897,7 +2897,7 @@
           "id": "english_L10_6",
           "subject": "english",
           "topic": "Meimad, sentence completion",
-          "question": "בחרו את הביטוי או את המשפט שמתאים ל: A synonym of BEGIN is",
+          "question": "איזו מילה קרובה במשמעות ל־BEGIN?",
           "options": [
             "finish",
             "stop",
@@ -3064,7 +3064,7 @@
           "id": "english_L11_3",
           "subject": "english",
           "topic": "Meimad, short reading",
-          "question": "Researchers found that sleep helps memory. המסקנה מהמשפט",
+          "question": "מה Researchers found that sleep helps memory. המסקנה מהמשפט?",
           "options": [
             "שינה מזיקה תמיד",
             "שינה קשורה לזיכרון",
@@ -3110,7 +3110,7 @@
           "id": "english_L11_5",
           "subject": "english",
           "topic": "Meimad, short reading",
-          "question": "The museum is free on Tuesdays. ביום שלישי",
+          "question": "מה The museum is free on Tuesdays. ביום שלישי?",
           "options": [
             "רק בתשלום",
             "הכניסה חינם",
@@ -3133,7 +3133,7 @@
           "id": "english_L11_6",
           "subject": "english",
           "topic": "Meimad, short reading",
-          "question": "He rarely eats meat. rarely פירושו",
+          "question": "מה פירוש «He rarely eats meat. rarely»?",
           "options": [
             "כל יום",
             "לעיתים רחוקות",
@@ -3300,7 +3300,7 @@
           "id": "english_L12_5",
           "subject": "english",
           "topic": "Connectors for Module C",
-          "question": "First we mix. Then we bake. Finally we wait. זה",
+          "question": "מה הקשר או המסקנה מהמשפט: First we mix. Then we bake. Finally we wait.?",
           "options": [
             "איסור",
             "ניגוד",
@@ -3323,7 +3323,7 @@
           "id": "english_L12_6",
           "subject": "english",
           "topic": "Connectors for Module C",
-          "question": "מה מתאים כאן: also משמש ל?",
+          "question": "למה משמש also?",
           "options": [
             "סיבה בלבד",
             "זמן עבר",
@@ -3588,7 +3588,7 @@
           "id": "english_L14_1",
           "subject": "english",
           "topic": "Phrasal verbs, everyday",
-          "question": "מה מתאים כאן: look for פירושו?",
+          "question": "מה פירוש «look for»?",
           "options": [
             "לטפל",
             "לוותר",
@@ -3611,7 +3611,7 @@
           "id": "english_L14_2",
           "subject": "english",
           "topic": "Phrasal verbs, everyday",
-          "question": "מה מתאים כאן: look after פירושו?",
+          "question": "מה פירוש «look after»?",
           "options": [
             "לחפש",
             "לטפל",
@@ -3634,7 +3634,7 @@
           "id": "english_L14_3",
           "subject": "english",
           "topic": "Phrasal verbs, everyday",
-          "question": "מה מתאים כאן: give up פירושו?",
+          "question": "מה פירוש «give up»?",
           "options": [
             "ללבוש",
             "לאסוף",
@@ -4083,7 +4083,7 @@
           "id": "english_L16_7",
           "subject": "english",
           "topic": "Unseen, school and health",
-          "question": "בחרו את הביטוי או את המשפט שמתאים ל: The opposite of healthy is",
+          "question": "מה ההפך באנגלית של healthy?",
           "options": [
             "fit",
             "sport",
@@ -4135,7 +4135,7 @@
           "id": "english_L17_1",
           "subject": "english",
           "topic": "Writing task, 70-90 words",
-          "question": "מכתב לא פורמלי מתחיל בדרך כלל ב",
+          "question": "השלימו: מכתב לא פורמלי מתחיל בדרך כלל ב ____",
           "options": [
             "Chapter 1",
             "Dear + שם",
@@ -4158,7 +4158,7 @@
           "id": "english_L17_2",
           "subject": "english",
           "topic": "Writing task, 70-90 words",
-          "question": "מה מתאים כאן: סיום ידידותי יכול להיות?",
+          "question": "מה סיום ידידותי יכול להיות?",
           "options": [
             "Amen only",
             "Yours faithfully only forever",
@@ -4181,7 +4181,7 @@
           "id": "english_L17_3",
           "subject": "english",
           "topic": "Writing task, 70-90 words",
-          "question": "אורך משימת הכתיבה ב־3 יח״ל הוא בערך",
+          "question": "מה אורך משימת הכתיבה ב־3 יח״ל הוא בערך?",
           "options": [
             "אלף מילים",
             "10 מילים",
@@ -4204,7 +4204,7 @@
           "id": "english_L17_4",
           "subject": "english",
           "topic": "Writing task, 70-90 words",
-          "question": "מה מתאים כאן: תיאור טוב כולל?",
+          "question": "מה תיאור טוב כולל?",
           "options": [
             "רק מספרים",
             "תארים וסדר הגיוני",
@@ -4302,7 +4302,7 @@
           "id": "english_L18_1",
           "subject": "english",
           "topic": "High-frequency verbs, Meimad/Bagrut",
-          "question": "מה מתאים כאן: tell צריך בדרך כלל?",
+          "question": "מה tell צריך בדרך כלל?",
           "options": [
             "רק מספר",
             "רק מילה בלי אדם",
@@ -4325,7 +4325,7 @@
           "id": "english_L18_2",
           "subject": "english",
           "topic": "High-frequency verbs, Meimad/Bagrut",
-          "question": "מה מתאים כאן: say בדרך כלל?",
+          "question": "מה say בדרך כלל?",
           "options": [
             "רק שם אדם בלי תוכן",
             "את התוכן, לא חובה אדם ישר",
@@ -7796,7 +7796,7 @@
           "id": "english_L33_9",
           "subject": "english",
           "topic": "Academic vocabulary, Modules band",
-          "question": "בחרו את הביטוי או את המשפט שמתאים ל: The opposite of increase is",
+          "question": "מה ההפך באנגלית של increase?",
           "options": [
             "invent",
             "translate",
@@ -8795,7 +8795,7 @@
           "id": "english_L38_1",
           "subject": "english",
           "topic": "Vocabulary in context, 3-unit exam style",
-          "question": "בחרו את הביטוי או את המשפט שמתאים ל: A synonym of IMPROVE is",
+          "question": "איזו מילה קרובה במשמעות ל־IMPROVE?",
           "options": [
             "make worse",
             "forget",
@@ -11073,7 +11073,7 @@
           "id": "english_L44_1",
           "subject": "english",
           "topic": "Vocabulary and sentence completion",
-          "question": "בחרו את הביטוי או את המשפט שמתאים ל: The opposite of cheap is",
+          "question": "מה ההפך באנגלית של cheap?",
           "options": [
             "early",
             "cheaply",
@@ -11303,7 +11303,7 @@
           "id": "english_L44_11",
           "subject": "english",
           "topic": "Vocabulary and sentence completion",
-          "question": "בחרו את הביטוי או את המשפט שמתאים ל: The past of go is",
+          "question": "מה צורת העבר של go?",
           "options": [
             "went",
             "goed",
@@ -11326,7 +11326,7 @@
           "id": "english_L44_12",
           "subject": "english",
           "topic": "Vocabulary and sentence completion",
-          "question": "בחרו את הביטוי או את המשפט שמתאים ל: The past of buy is",
+          "question": "מה צורת העבר של buy?",
           "options": [
             "buyed",
             "buying",
@@ -11349,7 +11349,7 @@
           "id": "english_L44_13",
           "subject": "english",
           "topic": "Vocabulary and sentence completion",
-          "question": "בחרו את הביטוי או את המשפט שמתאים ל: The past of make is",
+          "question": "מה צורת העבר של make?",
           "options": [
             "made",
             "maked",
@@ -17975,7 +17975,7 @@
       "id": "english_אוצר מיל_3",
       "subject": "english",
       "topic": "אוצר מילים",
-      "question": "מה מתאים כאן: APPLE זה?",
+      "question": "מה המשמעות של «APPLE»?",
       "options": [
         "לחם",
         "מים",
@@ -17998,7 +17998,7 @@
       "id": "english_אוצר מיל_4",
       "subject": "english",
       "topic": "אוצר מילים",
-      "question": "מה מתאים כאן: WATER זה?",
+      "question": "מה המשמעות של «WATER»?",
       "options": [
         "רוח",
         "חול",
@@ -18021,7 +18021,7 @@
       "id": "english_אוצר מיל_5",
       "subject": "english",
       "topic": "אוצר מילים",
-      "question": "מה מתאים כאן: HAPPY זה?",
+      "question": "מה המשמעות של «HAPPY»?",
       "options": [
         "שמח",
         "איטי",
@@ -18044,7 +18044,7 @@
       "id": "english_אוצר מיל_6",
       "subject": "english",
       "topic": "אוצר מילים",
-      "question": "מה מתאים כאן: COLD זה?",
+      "question": "מה המשמעות של «COLD»?",
       "options": [
         "חדש",
         "קר",
@@ -18067,7 +18067,7 @@
       "id": "english_אוצר מיל_7",
       "subject": "english",
       "topic": "אוצר מילים",
-      "question": "מה מתאים כאן: TEACHER זה?",
+      "question": "מה המשמעות של «TEACHER»?",
       "options": [
         "תלמיד",
         "מורה",
@@ -18090,7 +18090,7 @@
       "id": "english_אוצר מיל_8",
       "subject": "english",
       "topic": "אוצר מילים",
-      "question": "מה מתאים כאן: NIGHT זה?",
+      "question": "מה המשמעות של «NIGHT»?",
       "options": [
         "שבוע",
         "בוקר",
@@ -18113,7 +18113,7 @@
       "id": "english_אוצר מיל_9",
       "subject": "english",
       "topic": "אוצר מילים",
-      "question": "מה מתאים כאן: BIG זה?",
+      "question": "מה המשמעות של «BIG»?",
       "options": [
         "קטן",
         "איטי",
@@ -18136,7 +18136,7 @@
       "id": "english_אוצר מיל_10",
       "subject": "english",
       "topic": "אוצר מילים",
-      "question": "מה מתאים כאן: FAST זה?",
+      "question": "מה המשמעות של «FAST»?",
       "options": [
         "מהיר",
         "איטי",
@@ -18159,7 +18159,7 @@
       "id": "english_אוצר מיל_11",
       "subject": "english",
       "topic": "אוצר מילים",
-      "question": "מה מתאים כאן: FRIEND זה?",
+      "question": "מה המשמעות של «FRIEND»?",
       "options": [
         "שולחן",
         "קיר",
@@ -18182,7 +18182,7 @@
       "id": "english_אוצר מיל_12",
       "subject": "english",
       "topic": "אוצר מילים",
-      "question": "מה מתאים כאן: BEGIN זה?",
+      "question": "מה המשמעות של «BEGIN»?",
       "options": [
         "לסיים",
         "להתחיל",
@@ -18205,7 +18205,7 @@
       "id": "english_אוצר מיל_13",
       "subject": "english",
       "topic": "אוצר מילים",
-      "question": "מה מתאים כאן: DIFFICULT זה?",
+      "question": "מה המשמעות של «DIFFICULT»?",
       "options": [
         "קצר תמיד",
         "ריק",
@@ -18228,7 +18228,7 @@
       "id": "english_אוצר מיל_14",
       "subject": "english",
       "topic": "אוצר מילים",
-      "question": "מה מתאים כאן: ALWAYS זה?",
+      "question": "מה המשמעות של «ALWAYS»?",
       "options": [
         "לפעמים בלבד",
         "אף פעם",
@@ -18251,7 +18251,7 @@
       "id": "english_אוצר מיל_15",
       "subject": "english",
       "topic": "אוצר מילים",
-      "question": "מה מתאים כאן: BECAUSE זה?",
+      "question": "מה המשמעות של «BECAUSE»?",
       "options": [
         "אחרי",
         "כי / משום ש",
@@ -18274,7 +18274,7 @@
       "id": "english_אוצר מיל_16",
       "subject": "english",
       "topic": "אוצר מילים",
-      "question": "מה מתאים כאן: SIGNIFICANT זה?",
+      "question": "מה המשמעות של «SIGNIFICANT»?",
       "options": [
         "קטן תמיד",
         "רעש בלבד",
@@ -18297,7 +18297,7 @@
       "id": "english_אוצר מיל_17",
       "subject": "english",
       "topic": "אוצר מילים",
-      "question": "מה מתאים כאן: THEREFORE זה?",
+      "question": "מה המשמעות של «THEREFORE»?",
       "options": [
         "לכן",
         "בתוך",
@@ -18320,7 +18320,7 @@
       "id": "english_אוצר מיל_18",
       "subject": "english",
       "topic": "אוצר מילים",
-      "question": "מה מתאים כאן: ALTHOUGH זה?",
+      "question": "מה המשמעות של «ALTHOUGH»?",
       "options": [
         "למרות ש",
         "לכן",
@@ -18343,7 +18343,7 @@
       "id": "english_אוצר מיל_19",
       "subject": "english",
       "topic": "אוצר מילים",
-      "question": "מה מתאים כאן: RELIABLE זה?",
+      "question": "מה המשמעות של «RELIABLE»?",
       "options": [
         "זול",
         "מהיר תמיד",
@@ -18366,7 +18366,7 @@
       "id": "english_אוצר מיל_20",
       "subject": "english",
       "topic": "אוצר מילים",
-      "question": "מה מתאים כאן: EVIDENCE זה?",
+      "question": "מה המשמעות של «EVIDENCE»?",
       "options": [
         "ראיה / הוכחה",
         "כותרת",
@@ -18389,7 +18389,7 @@
       "id": "english_אוצר מיל_21",
       "subject": "english",
       "topic": "אוצר מילים",
-      "question": "מה מתאים כאן: NEVERTHELESS זה?",
+      "question": "מה המשמעות של «NEVERTHELESS»?",
       "options": [
         "בגלל",
         "לכן תמיד",
@@ -18481,7 +18481,7 @@
       "id": "english_זמנים בס_4",
       "subject": "english",
       "topic": "זמנים בסיסיים",
-      "question": "בחרו את המשפט בעבר",
+      "question": "בחרו את המשפט בעבר?",
       "options": [
         "They will play.",
         "They playing.",
@@ -18573,7 +18573,7 @@
       "id": "english_זמנים בס_8",
       "subject": "english",
       "topic": "זמנים בסיסיים",
-      "question": "בחרו את הביטוי או את המשפט שמתאים ל: The past of HAVE is",
+      "question": "מה צורת העבר של HAVE?",
       "options": [
         "has",
         "haved",
@@ -18596,7 +18596,7 @@
       "id": "english_זמנים בס_9",
       "subject": "english",
       "topic": "זמנים בסיסיים",
-      "question": "Do they like tea? תשובה קצרה חיובית",
+      "question": "מה Do they like tea? תשובה קצרה חיובית?",
       "options": [
         "Yes, they does.",
         "Yes, they did not.",
@@ -18872,7 +18872,7 @@
       "id": "english_משפטים ו_1",
       "subject": "english",
       "topic": "משפטים ומבנה",
-      "question": "מה מתאים כאן: הסדר הנכון?",
+      "question": "איזו אפשרות היא הסדר הנכון?",
       "options": [
         "Apples I like is.",
         "I like apples.",
@@ -18895,7 +18895,7 @@
       "id": "english_משפטים ו_2",
       "subject": "english",
       "topic": "משפטים ומבנה",
-      "question": "מה מתאים כאן: שאלה נכונה?",
+      "question": "איזו אפשרות היא שאלה נכונה?",
       "options": [
         "You do play tennis?",
         "Play you tennis?",
@@ -19148,7 +19148,7 @@
       "id": "english_משפטים ו_13",
       "subject": "english",
       "topic": "משפטים ומבנה",
-      "question": "בחרו את הביטוי או את המשפט שמתאים ל: The opposite of NEVER is",
+      "question": "מה ההפך באנגלית של NEVER?",
       "options": [
         "always",
         "never more",
@@ -19263,7 +19263,7 @@
       "id": "english_הבנת משפ_4",
       "subject": "english",
       "topic": "הבנת משפט",
-      "question": "Dan can swim but he cannot dive. דן",
+      "question": "מה Dan can swim but he cannot dive. דן?",
       "options": [
         "לא יודע כלום",
         "רק צולל",
@@ -19332,7 +19332,7 @@
       "id": "english_הבנת משפ_7",
       "subject": "english",
       "topic": "הבנת משפט",
-      "question": "מה מתאים כאן: No parking here. המשמעות?",
+      "question": "מה No parking here. המשמעות?",
       "options": [
         "חניה חינם",
         "אסור לחנות כאן",
@@ -19355,7 +19355,7 @@
       "id": "english_הבנת משפ_8",
       "subject": "english",
       "topic": "הבנת משפט",
-      "question": "מה מתאים כאן: Please speak slowly. הבקשה?",
+      "question": "מה Please speak slowly. הבקשה?",
       "options": [
         "לרוץ",
         "לצעוק",
@@ -19378,7 +19378,7 @@
       "id": "english_הבנת משפ_9",
       "subject": "english",
       "topic": "הבנת משפט",
-      "question": "He almost missed the bus. כמעט",
+      "question": "מה He almost missed the bus. כמעט?",
       "options": [
         "פספס את האוטובוס",
         "אהב את האוטובוס",
@@ -19401,7 +19401,7 @@
       "id": "english_הבנת משפ_10",
       "subject": "english",
       "topic": "הבנת משפט",
-      "question": "She used to live in Haifa. המשמעות",
+      "question": "מה She used to live in Haifa. המשמעות?",
       "options": [
         "אף פעם לא גרה שם",
         "בעבר גרה בחיפה",
@@ -19424,7 +19424,7 @@
       "id": "english_הבנת משפ_11",
       "subject": "english",
       "topic": "הבנת משפט",
-      "question": "If it rains, we will stay home. אם ירד גשם",
+      "question": "מה If it rains, we will stay home. אם ירד גשם?",
       "options": [
         "נישאר בבית",
         "נעוף",
@@ -19447,7 +19447,7 @@
       "id": "english_הבנת משפ_12",
       "subject": "english",
       "topic": "הבנת משפט",
-      "question": "בחרו את הביטוי או את המשפט שמתאים ל: The opposite of empty is",
+      "question": "מה ההפך באנגלית של empty?",
       "options": [
         "open",
         "full",
@@ -20275,7 +20275,7 @@
       "id": "english_קריאה קצ_10",
       "subject": "english",
       "topic": "קריאה קצרה 2",
-      "question": "Please keep the door closed. הבקשה",
+      "question": "מה Please keep the door closed. הבקשה?",
       "options": [
         "לשבור את הדלת",
         "להשאיר את הדלת סגורה",
@@ -20482,7 +20482,7 @@
       "id": "english_L9_1",
       "subject": "english",
       "topic": "Bagrut 3 units, what's on the exam",
-      "question": "רמת 3 יח״ל באנגלית מיושרת בערך ל",
+      "question": "השלימו: רמת 3 יח״ל באנגלית מיושרת בערך ל ____",
       "options": [
         "C1 רק אוניברסיטה",
         "C2 שפת אם",
@@ -20505,7 +20505,7 @@
       "id": "english_L9_2",
       "subject": "english",
       "topic": "Bagrut 3 units, what's on the exam",
-      "question": "מה מודולי 3 יח״ל הם?",
+      "question": "מהם מודולי 3 יח״ל?",
       "options": [
         "E ו־F בלבד",
         "רק G",
@@ -20528,7 +20528,7 @@
       "id": "english_L9_3",
       "subject": "english",
       "topic": "Bagrut 3 units, what's on the exam",
-      "question": "מה מתאים כאן: במימ״ד באנגלית בודקים?",
+      "question": "מה במימ״ד באנגלית בודקים?",
       "options": [
         "השלמת משפטים והבנת הנקרא",
         "ספרות שייקספיר",
@@ -20551,7 +20551,7 @@
       "id": "english_L9_4",
       "subject": "english",
       "topic": "Bagrut 3 units, what's on the exam",
-      "question": "מה מתאים כאן: כתיבה במודול C היא בערך?",
+      "question": "מה כתיבה במודול C היא בערך?",
       "options": [
         "70-90 מילים",
         "500 מילים חובה",
@@ -20574,7 +20574,7 @@
       "id": "english_L9_5",
       "subject": "english",
       "topic": "Bagrut 3 units, what's on the exam",
-      "question": "מה מתאים כאן: Band I/II זה?",
+      "question": "מה המשמעות של «Band I/II»?",
       "options": [
         "שמות מודולים",
         "רמות אוצר מילים בתוכנית",
@@ -20597,7 +20597,7 @@
       "id": "english_L9_6",
       "subject": "english",
       "topic": "Bagrut 3 units, what's on the exam",
-      "question": "מה מתאים כאן: קודם סוגרים פער ב?",
+      "question": "השלימו: קודם סוגרים פער ב ____",
       "options": [
         "רק שירה",
         "רק משפטים משפטיים",
@@ -20620,7 +20620,7 @@
       "id": "english_L9_7",
       "subject": "english",
       "topic": "Bagrut 3 units, what's on the exam",
-      "question": "מה מתאים כאן: בעל־פה ב־3 יח״ל הוא בדרך כלל?",
+      "question": "מה בעל־פה ב־3 יח״ל הוא בדרך כלל?",
       "options": [
         "רק מאל״ו",
         "בחינה פנימית בבית הספר",
@@ -20758,7 +20758,7 @@
       "id": "english_L10_5",
       "subject": "english",
       "topic": "Meimad, sentence completion",
-      "question": "בחרו את הביטוי או את המשפט שמתאים ל: The opposite of INCREASE is",
+      "question": "מה ההפך באנגלית של INCREASE?",
       "options": [
         "decrease",
         "improve",
@@ -20781,7 +20781,7 @@
       "id": "english_L10_6",
       "subject": "english",
       "topic": "Meimad, sentence completion",
-      "question": "בחרו את הביטוי או את המשפט שמתאים ל: A synonym of BEGIN is",
+      "question": "איזו מילה קרובה במשמעות ל־BEGIN?",
       "options": [
         "finish",
         "stop",
@@ -20942,7 +20942,7 @@
       "id": "english_L11_3",
       "subject": "english",
       "topic": "Meimad, short reading",
-      "question": "Researchers found that sleep helps memory. המסקנה מהמשפט",
+      "question": "מה Researchers found that sleep helps memory. המסקנה מהמשפט?",
       "options": [
         "שינה מזיקה תמיד",
         "שינה קשורה לזיכרון",
@@ -20988,7 +20988,7 @@
       "id": "english_L11_5",
       "subject": "english",
       "topic": "Meimad, short reading",
-      "question": "The museum is free on Tuesdays. ביום שלישי",
+      "question": "מה The museum is free on Tuesdays. ביום שלישי?",
       "options": [
         "רק בתשלום",
         "הכניסה חינם",
@@ -21011,7 +21011,7 @@
       "id": "english_L11_6",
       "subject": "english",
       "topic": "Meimad, short reading",
-      "question": "He rarely eats meat. rarely פירושו",
+      "question": "מה פירוש «He rarely eats meat. rarely»?",
       "options": [
         "כל יום",
         "לעיתים רחוקות",
@@ -21172,7 +21172,7 @@
       "id": "english_L12_5",
       "subject": "english",
       "topic": "Connectors for Module C",
-      "question": "First we mix. Then we bake. Finally we wait. זה",
+      "question": "מה הקשר או המסקנה מהמשפט: First we mix. Then we bake. Finally we wait.?",
       "options": [
         "איסור",
         "ניגוד",
@@ -21195,7 +21195,7 @@
       "id": "english_L12_6",
       "subject": "english",
       "topic": "Connectors for Module C",
-      "question": "מה מתאים כאן: also משמש ל?",
+      "question": "למה משמש also?",
       "options": [
         "סיבה בלבד",
         "זמן עבר",
@@ -21448,7 +21448,7 @@
       "id": "english_L14_1",
       "subject": "english",
       "topic": "Phrasal verbs, everyday",
-      "question": "מה מתאים כאן: look for פירושו?",
+      "question": "מה פירוש «look for»?",
       "options": [
         "לטפל",
         "לוותר",
@@ -21471,7 +21471,7 @@
       "id": "english_L14_2",
       "subject": "english",
       "topic": "Phrasal verbs, everyday",
-      "question": "מה מתאים כאן: look after פירושו?",
+      "question": "מה פירוש «look after»?",
       "options": [
         "לחפש",
         "לטפל",
@@ -21494,7 +21494,7 @@
       "id": "english_L14_3",
       "subject": "english",
       "topic": "Phrasal verbs, everyday",
-      "question": "מה מתאים כאן: give up פירושו?",
+      "question": "מה פירוש «give up»?",
       "options": [
         "ללבוש",
         "לאסוף",
@@ -21954,7 +21954,7 @@
       "id": "english_L16_7",
       "subject": "english",
       "topic": "Unseen, school and health",
-      "question": "בחרו את הביטוי או את המשפט שמתאים ל: The opposite of healthy is",
+      "question": "מה ההפך באנגלית של healthy?",
       "options": [
         "fit",
         "sport",
@@ -22000,7 +22000,7 @@
       "id": "english_L17_1",
       "subject": "english",
       "topic": "Writing task, 70-90 words",
-      "question": "מכתב לא פורמלי מתחיל בדרך כלל ב",
+      "question": "השלימו: מכתב לא פורמלי מתחיל בדרך כלל ב ____",
       "options": [
         "Chapter 1",
         "Dear + שם",
@@ -22023,7 +22023,7 @@
       "id": "english_L17_2",
       "subject": "english",
       "topic": "Writing task, 70-90 words",
-      "question": "מה מתאים כאן: סיום ידידותי יכול להיות?",
+      "question": "מה סיום ידידותי יכול להיות?",
       "options": [
         "Amen only",
         "Yours faithfully only forever",
@@ -22046,7 +22046,7 @@
       "id": "english_L17_3",
       "subject": "english",
       "topic": "Writing task, 70-90 words",
-      "question": "אורך משימת הכתיבה ב־3 יח״ל הוא בערך",
+      "question": "מה אורך משימת הכתיבה ב־3 יח״ל הוא בערך?",
       "options": [
         "אלף מילים",
         "10 מילים",
@@ -22069,7 +22069,7 @@
       "id": "english_L17_4",
       "subject": "english",
       "topic": "Writing task, 70-90 words",
-      "question": "מה מתאים כאן: תיאור טוב כולל?",
+      "question": "מה תיאור טוב כולל?",
       "options": [
         "רק מספרים",
         "תארים וסדר הגיוני",
@@ -22184,7 +22184,7 @@
       "id": "english_L18_1",
       "subject": "english",
       "topic": "High-frequency verbs, Meimad/Bagrut",
-      "question": "מה מתאים כאן: tell צריך בדרך כלל?",
+      "question": "מה tell צריך בדרך כלל?",
       "options": [
         "רק מספר",
         "רק מילה בלי אדם",
@@ -22207,7 +22207,7 @@
       "id": "english_L18_2",
       "subject": "english",
       "topic": "High-frequency verbs, Meimad/Bagrut",
-      "question": "מה מתאים כאן: say בדרך כלל?",
+      "question": "מה say בדרך כלל?",
       "options": [
         "רק שם אדם בלי תוכן",
         "את התוכן, לא חובה אדם ישר",
@@ -25565,7 +25565,7 @@
       "id": "english_L33_9",
       "subject": "english",
       "topic": "Academic vocabulary, Modules band",
-      "question": "בחרו את הביטוי או את המשפט שמתאים ל: The opposite of increase is",
+      "question": "מה ההפך באנגלית של increase?",
       "options": [
         "invent",
         "translate",
@@ -26557,7 +26557,7 @@
       "id": "english_L38_1",
       "subject": "english",
       "topic": "Vocabulary in context, 3-unit exam style",
-      "question": "בחרו את הביטוי או את המשפט שמתאים ל: A synonym of IMPROVE is",
+      "question": "איזו מילה קרובה במשמעות ל־IMPROVE?",
       "options": [
         "make worse",
         "forget",
@@ -28776,7 +28776,7 @@
       "id": "english_L44_1",
       "subject": "english",
       "topic": "Vocabulary and sentence completion",
-      "question": "בחרו את הביטוי או את המשפט שמתאים ל: The opposite of cheap is",
+      "question": "מה ההפך באנגלית של cheap?",
       "options": [
         "early",
         "cheaply",
@@ -29006,7 +29006,7 @@
       "id": "english_L44_11",
       "subject": "english",
       "topic": "Vocabulary and sentence completion",
-      "question": "בחרו את הביטוי או את המשפט שמתאים ל: The past of go is",
+      "question": "מה צורת העבר של go?",
       "options": [
         "went",
         "goed",
@@ -29029,7 +29029,7 @@
       "id": "english_L44_12",
       "subject": "english",
       "topic": "Vocabulary and sentence completion",
-      "question": "בחרו את הביטוי או את המשפט שמתאים ל: The past of buy is",
+      "question": "מה צורת העבר של buy?",
       "options": [
         "buyed",
         "buying",
@@ -29052,7 +29052,7 @@
       "id": "english_L44_13",
       "subject": "english",
       "topic": "Vocabulary and sentence completion",
-      "question": "בחרו את הביטוי או את המשפט שמתאים ל: The past of make is",
+      "question": "מה צורת העבר של make?",
       "options": [
         "made",
         "maked",

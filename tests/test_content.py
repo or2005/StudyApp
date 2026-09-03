@@ -1,4 +1,5 @@
 import os
+import re
 import sys
 import unittest
 
@@ -53,8 +54,17 @@ class ContentQualityTests(unittest.TestCase):
         banned = {"מה נכון?", "מה נכון", "איך כותבים נכון?", "choose correct"}
         for key, bank in self.banks.items():
             for q in bank["questions"]:
-                stem = " ".join(str(q.get("question") or "").split()).lower()
-                self.assertNotIn(stem, banned, f"{key} {q.get('id')}")
+                stem = " ".join(str(q.get("question") or "").split())
+                low = stem.lower()
+                self.assertNotIn(low, banned, f"{key} {q.get('id')}")
+                self.assertFalse(
+                    stem.startswith("מה מתאים כאן"),
+                    f"{key} {q.get('id')}: {stem}",
+                )
+                self.assertFalse(
+                    bool(re.search(r"^מה .{2,40} (הוא|היא|הם|הן)\s*\??$", stem)),
+                    f"{key} {q.get('id')} inverted copula: {stem}",
+                )
 
     def test_every_question_has_a_real_explanation(self):
         for key, bank in self.banks.items():

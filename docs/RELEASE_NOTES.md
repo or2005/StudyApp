@@ -8,8 +8,10 @@ StudyApp is a Hebrew-first **desktop** study app.
 - Linux: `StudyApp-4.7.0-linux-portable.tar.gz`
 
 ## What's new
-- Questions are written as full tasks, not fragments such as «נרדפת למהיר»
-- English and math stay readable on English Windows (no flipped punctuation)
+- Questions are written as full tasks, not fragments such as «נרדפת למהיר» or «APPLE זה»
+- «מים» and similar words are no longer skipped as if they were already a question
+- Percent and definition prompts read as «כמה הם…» / «מהו…», not backwards Hebrew
+- English and math stay readable on English Windows (no flipped punctuation or scrambled formulas)
 - Practice shows what the question is asking before the student picks an answer
 - Dummy options like «כההון» are gone
 - Meimad passages are fully visible

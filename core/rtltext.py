@@ -11,6 +11,9 @@ _BIDI_MARKS: Final[str] = (
 )
 _SEG = re.compile(r"\S+|\s+")
 _RUNS = re.compile(r"[\u0590-\u05FF]+|[^\u0590-\u05FF]+")
+_MIXED_PIECE = re.compile(
+    r"[\u0590-\u05FF]+[־\-]*|[A-Za-z0-9]+|[^A-Za-z0-9\u0590-\u05FF\s]+|\s+"
+)
 _HEB = re.compile(r"[\u0590-\u05FF]")
 _LTR = re.compile(r"[A-Za-z0-9]")
 _RTL_LANG: Final[frozenset[int]] = frozenset({0x01, 0x0D})  # Arabic, Hebrew
@@ -75,6 +78,17 @@ def needs_visual() -> bool:
     return resolved_mode() in {"words", "letters"}
 
 
+def _expand_parts(text: str) -> list[str]:
+    """מפריד «ב־2H2» ל־עברית ולנוסחה, כדי שהנוסחה לא תתהפך."""
+    out: list[str] = []
+    for tok in _SEG.findall(text):
+        if tok.isspace() or not (_HEB.search(tok) and _LTR.search(tok)):
+            out.append(tok)
+            continue
+        out.extend(_MIXED_PIECE.findall(tok) or [tok])
+    return out
+
+
 def _token_kind(tok: str) -> str:
     if not tok or tok.isspace():
         return "space"
@@ -117,6 +131,12 @@ def _directional_runs(parts: list[str]) -> list[tuple[str, list[str]]]:
         while idx < n:
             nxt = _token_kind(parts[idx])
             if nxt in {direction, "neutral"}:
+                if nxt == "neutral" and direction == "rtl":
+                    look_n = idx
+                    while look_n < n and _token_kind(parts[look_n]) in {"neutral", "space"}:
+                        look_n += 1
+                    if look_n < n and _token_kind(parts[look_n]) == "ltr":
+                        break
                 buf.append(parts[idx])
                 idx += 1
                 continue
@@ -147,11 +167,38 @@ def _split_he_punct(tok: str) -> list[str]:
     return [tok]
 
 
+def _is_short_ltr(tokens: list[str]) -> bool:
+    chunk = "".join(tokens).strip()
+    return bool(re.fullmatch(r"[A-Za-z][.?]?", chunk))
+
+
+def _glue_short_ltr(runs: list[tuple[str, list[str]]]) -> list[tuple[str, list[str]]]:
+    """מצמיד x / a / v? למילה העברית שלידם, כדי לא לקרוע «מהו x?»."""
+    out: list[tuple[str, list[str]]] = []
+    idx = 0
+    n = len(runs)
+    while idx < n:
+        direction, tokens = runs[idx]
+        if direction == "rtl":
+            look = idx + 1
+            spaces: list[str] = []
+            if look < n and runs[look][0] == "space":
+                spaces = runs[look][1]
+                look += 1
+            if look < n and runs[look][0] == "ltr" and _is_short_ltr(runs[look][1]):
+                out.append(("rtl", tokens + spaces + runs[look][1]))
+                idx = look + 1
+                continue
+        out.append((direction, tokens))
+        idx += 1
+    return out
+
+
 def visual_line(text: str) -> str:
     """סדר מילים לקריאה מימין ב-Windows לועזי, בלי להפוך אנגלית או נוסחה."""
     if not text or text.isspace():
         return text
-    parts = _SEG.findall(text)
+    parts = _expand_parts(text)
     kinds = {_token_kind(part) for part in parts}
     if "rtl" not in kinds:
         return text
@@ -160,8 +207,11 @@ def visual_line(text: str) -> str:
         for part in parts:
             expanded.extend(_split_he_punct(part))
         return "".join(reversed(expanded))
+    runs = _glue_short_ltr(_directional_runs(parts))
+    equation = any(ch in text for ch in "=\u2192\u21d2") and any(ch.isdigit() for ch in text)
+    ordered = runs if equation else list(reversed(runs))
     out: list[str] = []
-    for direction, tokens in reversed(_directional_runs(parts)):
+    for direction, tokens in ordered:
         if direction == "rtl":
             inner: list[str] = []
             for tok in tokens:

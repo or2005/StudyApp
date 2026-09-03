@@ -86,6 +86,19 @@ class RtlTextTests(unittest.TestCase):
         src = "x² − 5x + 6 = 0"
         self.assertEqual(rtltext.visual_line(src), src)
 
+    def test_formula_then_hebrew_keeps_equation_readable(self):
+        src = "5x − 2x + 7 = 16. מהו x?"
+        visual = rtltext.visual_line(src)
+        self.assertIn("5x − 2x + 7 = 16", visual)
+        self.assertTrue(visual.startswith("5x"))
+        self.assertIn("מהו", visual)
+
+    def test_many_latin_islands_do_not_scramble_formula(self):
+        src = "מהו ב־2H2 + O2 → 2H2O, יחס H2 ל־O2?"
+        visual = rtltext.visual_line(src)
+        self.assertIn("2H2 + O2", visual)
+        self.assertNotIn("O2 → 2H2O, +", visual)
+
     def test_mixed_hebrew_keeps_english_chunk(self):
         src = "השלימו: She ___ her homework."
         visual = rtltext.visual_line(src)

@@ -15,14 +15,34 @@ _ANT = re.compile(
     r"^(?:ה)?(?:ניגוד|הפך)\s+של\s*[«\"']?(.+?)[»\"']?\s*$"
 )
 _ROOT_FORM = re.compile(r"^שורש\s+(\S+)\s+ב(עבר|הווה|עתיד)\s*(?:\(([^)]+)\))?\s*$")
-_HE_COPULA = re.compile(r"^(.{2,40})\s+(הוא|היא|הם|הן)\s*$")
+_HE_COPULA = re.compile(r"^(.{2,48}?)\s+(הוא|היא|הם|הן)\s*\??$")
 _CHOOSE_EN = re.compile(r"^Choose\s+(.+)$", re.I)
 _MATH_ONLY = re.compile(r"^[\d\s+\-×xX*/÷=().]+$")
 _EN_SHORT = re.compile(r"^[A-Za-z][A-Za-z0-9 '!?.,:]{0,48}$")
 _HEB = re.compile(r"[\u0590-\u05FF]")
+# גבול מילה אחרי מי/מה, כדי לא לפספס «מים» / «מהיר» / «מילת».
 _ALREADY_ASK = re.compile(
-    r"^(מה[וו]?|מי|איז[וה]|מתי|כמה|איפה|למה|בחרו|כתבו|השלימו|קראו|איזו\s+מילה)"
+    r"^(?:מה(?:ו|י|ם|ן)?|מי|איזה|איזו|מתי|כמה|איפה|למה|בחרו|כתבו|השלימו|קראו)(?:\s|$|\?)"
 )
+_GENERIC_PREFIX = "מה מתאים כאן:"
+_COPULA_WORD = {"הוא": "מהו", "היא": "מהי", "הם": "מהם", "הן": "מהן"}
+_PCT = re.compile(
+    r"^(\d+(?:[.,]\d+)?)\s*%\s*מ[־\-]?\s*(\d+(?:[.,]\d+)?)\s*(?:הם|הן|הוא)?\s*\??$"
+)
+_INVERTED_COP = re.compile(r"^מה (.+?) (הוא|היא|הם|הן)\s*\??$")
+_ZEH = re.compile(r"^(.+?)\s+זה\s*\??$")
+_USES = re.compile(r"^(.+?)\s+(משמש(?:ות|ים)?)\s+ל\s*(.*?)\s*\??$")
+_ROOT_OF = re.compile(r"^שורש של\s*[«\"']?(.+?)[»\"']?\s*\??$")
+_GERUND = re.compile(r"^שם פעולה של\s*[«\"']?(.+?)[»\"']?\s*\??$")
+_EN_PAST = re.compile(r"^The past of\s+(\S+)\s+is\s*$", re.I)
+_EN_OPP = re.compile(r"^The opposite of\s+(.+?)\s+is\s*$", re.I)
+_EN_SYN = re.compile(r"^A synonym of\s+(.+?)\s+is\s*$", re.I)
+_SIGN = re.compile(r"^[«\"']([^»\"']+)[»\"']\s*\??$")
+_ASKS = re.compile(r"^(.+?)\s+שואל\s*\??$")
+_MEANS = re.compile(r"^(.+?)\s+(?:פירושו|פירושה|משמע|משמעו)\s*\??$")
+_SAYS = re.compile(r"^(.+?)\s+אומר(?:ת)?(?:\s+למורה)?\s*\??$")
+_CLOSE_HE = re.compile(r"^(.+?)\s+קרוב למילה העברית\s*\??$")
+_ROLE_IN = re.compile(r"^(פועל|לוואי|נשוא|נושא|מושא|פסוקית זיקה)\s+(ב.*)$")
 
 GENERIC_HINTS = {
     "קראו שוב את השאלה. מה בדיוק מבקשים למצוא?",
@@ -179,13 +199,55 @@ def feedback_note(question: dict[str, Any] | None, *, correct: bool, subject: st
     return mistake or rule
 
 
-def clarify_stem(question: dict[str, Any] | None) -> str:
-    """מרחיב ניסוח קצר או מקוטע, בלי לחשוף תשובה. בטוח להריץ פעמיים."""
-    stem = str((question or {}).get("question") or "").strip()
-    if not stem:
-        return ""
-    if stem.startswith("איזו מילה ") or stem.startswith("השלימו את החסר") or stem.startswith("מה צורת"):
+_QUOTE_MARKS = " «»\"'"
+
+
+def _clean_word(text: str) -> str:
+    return str(text or "").strip().strip(_QUOTE_MARKS)
+
+
+def _unwrap_weak_stem(stem: str) -> str:
+    """מסיר ניסוח גנרי ישן כדי שאפשר יהיה לנסח מחדש."""
+    text = stem.strip()
+    if text.startswith(_GENERIC_PREFIX):
+        text = text[len(_GENERIC_PREFIX):].strip()
+    inverted_pct = re.match(
+        r"^מה\s+(\d+(?:[.,]\d+)?)\s*%\s*מ[־\-]?\s*(\d+(?:[.,]\d+)?)\s+הם\s*\??$",
+        text,
+    )
+    if inverted_pct:
+        return f"{inverted_pct.group(1)}% מ־{inverted_pct.group(2)} הם"
+    inverted = _INVERTED_COP.match(text)
+    if (
+        inverted
+        and not text.startswith(("מהו ", "מהי ", "מהם ", "מהן "))
+        and "." not in inverted.group(1)
+        and len(inverted.group(1)) <= 48
+    ):
+        return f"{inverted.group(1)} {inverted.group(2)}"
+    return text
+
+
+def _as_question(stem: str) -> str:
+    text = stem.strip().rstrip("?").strip()
+    if not text:
         return stem
+    if _ALREADY_ASK.match(text + " "):
+        return text if text.endswith("?") else f"{text}?"
+    if re.search(r"(?:\s|^)(ל|ב|עם|של|מ|כ)$", text):
+        return f"השלימו: {text} ____"
+    if re.search(r"(נכון|נכונה|תקין|תקינה|תקין יותר)$", text):
+        return f"איזו אפשרות היא {text}?"
+    if re.match(r"^(משפט|ציטוט|רשימה|ציווי)\b", text):
+        return f"איזה {text}?"
+    if text.startswith(("בירת ", "יחידת ")):
+        return f"מהי {text}?"
+    if _HEB.search(text):
+        return f"מה {text}?"
+    return text
+
+
+def _rewrite_stem(stem: str) -> str:
     quoted = _SYN_QUOTED.match(stem)
     if quoted:
         word = quoted.group(1).strip(" «»\"'")
@@ -205,10 +267,66 @@ def clarify_stem(question: dict[str, Any] | None) -> str:
         when = root.group(2)
         who = root.group(3) or "יחיד"
         return f"מה צורת ה{when} ({who}) של השורש {root.group(1)}?"
+    pct = _PCT.match(stem)
+    if pct:
+        return f"כמה הם {pct.group(1)}% מ־{pct.group(2)}?"
+    zeh = _ZEH.match(stem)
+    if zeh:
+        body = zeh.group(1).strip(" «»\"'")
+        words = body.split()
+        if "." in body or "!" in body or len(words) >= 7:
+            return f"מה הקשר או המסקנה מהמשפט: {body}?"
+        return f"מה המשמעות של «{body}»?"
+    uses = _USES.match(stem)
+    if uses:
+        noun = uses.group(1).strip()
+        verb = uses.group(2)
+        extra = re.sub(r"\s*כי\s*$", "", uses.group(3) or "").strip(" ?")
+        line = f"למה {verb} {noun}"
+        if extra:
+            line += f" ל{extra}" if not extra.startswith("ל") else f" {extra}"
+        return f"{line}?"
+    root_of = _ROOT_OF.match(stem)
+    if root_of:
+        return f"מה השורש של «{_clean_word(root_of.group(1))}»?"
+    gerund = _GERUND.match(stem)
+    if gerund:
+        return f"מה שם הפעולה של «{_clean_word(gerund.group(1))}»?"
+    sign = _SIGN.match(stem)
+    if sign:
+        return f"מה משמעות השלט או המשפט: «{sign.group(1).strip()}»?"
+    asks = _ASKS.match(stem)
+    if asks:
+        return f"מה שואלת המילה או הביטוי «{asks.group(1).strip()}»?"
+    means = _MEANS.match(stem)
+    if means:
+        return f"מה פירוש «{means.group(1).strip()}»?"
+    says = _SAYS.match(stem)
+    if says:
+        return f"מה אומר הביטוי «{says.group(1).strip()}»?"
+    close_he = _CLOSE_HE.match(stem)
+    if close_he:
+        return f"לאיזו מילה עברית קרוב «{close_he.group(1).strip()}»?"
+    role = _ROLE_IN.match(stem)
+    if role:
+        return f"מהו ה{role.group(1)} {role.group(2).rstrip('?')}?"
+    if " כמו " in stem and re.search(r"\sל\s*\??$", stem):
+        return f"השלימו את האנלוגיה: {stem.rstrip('?').strip()} ____"
+    if re.search(r"(קשור(?:ים|ה)|שייכת|המשותף)\s*ל?\s*\??$", stem):
+        return f"לאיזה שורש או נושא {stem.rstrip('?').strip()}?"
     choose = _CHOOSE_EN.match(stem)
     if choose:
         rest = choose.group(1).strip(" :.")
         return f"בחרו באנגלית: {rest}" if rest else "בחרו את הצורה או את המשפט התקינים באנגלית."
+    past = _EN_PAST.match(stem)
+    if past:
+        return f"מה צורת העבר של {past.group(1)}?"
+    opp = _EN_OPP.match(stem)
+    if opp:
+        return f"מה ההפך באנגלית של {opp.group(1).strip()}?"
+    syn = _EN_SYN.match(stem)
+    if syn:
+        return f"איזו מילה קרובה במשמעות ל־{syn.group(1).strip()}?"
     if _MATH_ONLY.match(stem) and any(ch.isdigit() for ch in stem):
         return f"כמה יוצא {stem}?"
     if "___" in stem or "____" in stem:
@@ -222,20 +340,33 @@ def clarify_stem(question: dict[str, Any] | None) -> str:
     copula = _HE_COPULA.match(stem)
     if copula and not _ALREADY_ASK.match(stem):
         noun, verb = copula.group(1).strip(" «»\"'"), copula.group(2)
-        if verb in {"הוא", "היא"}:
-            return f"מה{ 'י' if verb == 'היא' else 'ו' } {noun}?"
-        return f"מה {noun} {verb}?"
+        prefix = _COPULA_WORD.get(verb, "מהו")
+        return f"{prefix} {noun}?"
+    if _ALREADY_ASK.match(stem):
+        return stem if stem.endswith("?") or len(stem) > 18 else f"{stem.rstrip('?')}?"
     if (
-        len(stem) <= 28
+        len(stem) <= 70
         and _HEB.search(stem)
         and not stem.endswith("?")
-        and not _ALREADY_ASK.match(stem)
         and "___" not in stem
     ):
-        if stem.startswith(("בירת ", "יחידת ")):
-            return f"מהי {stem}?"
-        return f"מה מתאים כאן: {stem}?"
+        return _as_question(stem)
     return stem
+
+
+def clarify_stem(question: dict[str, Any] | None) -> str:
+    """מרחיב ניסוח קצר או מקוטע, בלי לחשוף תשובה. בטוח להריץ פעמיים."""
+    stem = str((question or {}).get("question") or "").strip()
+    if not stem:
+        return ""
+    if stem.startswith("איזו מילה ") or stem.startswith("השלימו את החסר") or stem.startswith("מה צורת"):
+        return stem
+    if stem.startswith("מה המשמעות של") or stem.startswith("כמה הם ") or stem.startswith("למה משמש"):
+        return stem
+    rewritten = _rewrite_stem(_unwrap_weak_stem(stem))
+    if rewritten.startswith(_GENERIC_PREFIX):
+        rewritten = _rewrite_stem(_unwrap_weak_stem(rewritten))
+    return rewritten
 
 
 def task_prompt(question: dict[str, Any] | None) -> str:
