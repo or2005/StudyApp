@@ -10,6 +10,7 @@ _BIDI_MARKS: Final[str] = (
 )
 _SEG = re.compile(r"\S+|\s+")
 _RTL_LANG: Final[frozenset[int]] = frozenset({0x01, 0x0D})  # Arabic, Hebrew
+_FORCE_VISUAL: bool | None = None
 
 
 def strip_marks(text: str) -> str:
@@ -38,11 +39,24 @@ def windows_has_rtl_ui() -> bool:
     return False
 
 
-def needs_visual() -> bool:
+def configure_for_os() -> bool:
+    """קובע פעם אחת: מחשב לא־עברי/ערבי צריך סידור מילים ויזואלי."""
+    global _FORCE_VISUAL
+    _FORCE_VISUAL = _detect_visual()
+    return _FORCE_VISUAL
+
+
+def _detect_visual() -> bool:
     if os.name == "nt":
         return not windows_has_rtl_ui()
     loc = (os.environ.get("LANG") or os.environ.get("LC_ALL") or os.environ.get("LC_CTYPE") or "").lower()
     return not (loc.startswith("he") or loc.startswith("ar") or ".he" in loc)
+
+
+def needs_visual() -> bool:
+    if _FORCE_VISUAL is not None:
+        return _FORCE_VISUAL
+    return _detect_visual()
 
 
 def visual_line(text: str) -> str:

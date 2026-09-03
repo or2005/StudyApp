@@ -2,6 +2,7 @@ import datetime
 import tkinter as tk
 
 from core.config import ADHD_CONFIG, COLORS, FONT_STEPS, VERSION, rtl
+from core.i18n import LANGS, LANG_LABELS, ui as i18n_ui
 from ui.fast import fast_label
 from ui.widgets import GhostButton, ModernButton, font_size, make_card, page_header, rounded_field, Page
 
@@ -19,7 +20,7 @@ class SettingsScreen(Page):
                  on_toggle_autostart=None, autostart_on=False,
                  on_toggle_reminder=None, reminder_on=False, reminder_time="17:00",
                  on_save_reminder_time=None,                  on_install_shortcuts=None, on_test_notify=None, on_secret=None,
-                 on_health=None):
+                 on_health=None, on_helper_lang=None, helper_lang="he"):
         super().__init__(master)
         self.storage = storage
         self.on_exam_date = on_exam_date
@@ -29,7 +30,13 @@ class SettingsScreen(Page):
         self.on_add_profile = on_add_profile
         self.on_delete_profile = on_delete_profile
 
-        page_header(self, "הגדרות", "רק מה שמשפיע על הלמידה.")
+        page_header(self, i18n_ui("settings.title"), i18n_ui("settings.subtitle"))
+
+        lang_card = self._card(i18n_ui("settings.language"), i18n_ui("settings.language_hint"))
+        self._chips(lang_card, (
+            (LANG_LABELS[code], code == helper_lang, lambda c=code: on_helper_lang(c) if on_helper_lang else None)
+            for code in LANGS
+        ), width=110)
 
         look = self._card("תצוגה", "בהיר או כהה, גודל טקסט, ומיקוד בלי רעש.")
         self._chips(look, (
@@ -103,10 +110,10 @@ class SettingsScreen(Page):
             )
         row = tk.Frame(updates, bg=COLORS["card_bg"])
         row.pack(fill="x", pady=(12, 0))
-        ModernButton(row, text=rtl("בדוק עדכון"), height=42, width=150,
+        ModernButton(row, text=rtl(i18n_ui("btn.check_update")), height=48, width=170,
                      command=on_check_update).pack(side="right", padx=6)
         if has_pending and on_install_update:
-            ModernButton(row, text=rtl("עדכן עכשיו"), height=42, width=150,
+            ModernButton(row, text=rtl(i18n_ui("btn.update_now")), height=48, width=170,
                          command=on_install_update).pack(side="right", padx=6)
         GhostButton(row, text=rtl("התקנה מקובץ"), height=42, width=150,
                     command=on_pick_update).pack(side="right", padx=6)
@@ -117,11 +124,8 @@ class SettingsScreen(Page):
             on_auto_update,
         )
 
-        help_card = self._card(
-            "בדיקת תקלות",
-            "הסורק בודק לבד אם משהו שבור, מתקן מה שאפשר, ומסביר מה לעשות.",
-        )
-        GhostButton(help_card, text=rtl("הרץ בדיקת תקלות"), height=42, width=200,
+        help_card = self._card(i18n_ui("settings.health"), i18n_ui("settings.health_hint"))
+        GhostButton(help_card, text=rtl(i18n_ui("settings.run_health")), height=48, width=240,
                     command=on_health).pack(anchor="e", pady=(12, 0))
 
         danger = self._card("התחלה מחדש", "מוחק הרשמה, אבחון והתקדמות מהמחשב הזה.", danger=True)

@@ -15,6 +15,7 @@ from core.storage import DATA_DIR
 LOG_DIR = os.path.join(DATA_DIR, "logs")
 LOG_PATH = os.path.join(LOG_DIR, "studyapp.log")
 CRASH_PATH = os.path.join(LOG_DIR, "crash.log")
+CRASH_FLAG = os.path.join(LOG_DIR, "needs_help.json")
 
 _configured = False
 _logger = logging.getLogger("studyapp")
@@ -78,6 +79,17 @@ def _write_crash(source: str, exc_type, exc_value, exc_tb) -> str:
         os.makedirs(LOG_DIR, exist_ok=True)
         with open(CRASH_PATH, "a", encoding="utf-8") as handle:
             handle.write(f"\n=== {time.strftime('%Y-%m-%d %H:%M:%S')} | {source} ===\n{text}")
+        import json
+
+        with open(CRASH_FLAG, "w", encoding="utf-8") as handle:
+            json.dump(
+                {
+                    "at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+                    "kind": "crash",
+                    "source": str(source)[:40],
+                },
+                handle,
+            )
     except Exception:
         pass
     return text

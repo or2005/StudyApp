@@ -19,9 +19,15 @@ LINUX_FONTS = (
 )
 
 WINDOWS_FONTS = (
+    "Segoe UI",
+    "Arial",
+    "Tahoma",
+    "David",
+    "Noto Sans Hebrew",
+    "Times New Roman",
+    "Microsoft Sans Serif",
     "Segoe UI Variable Text",
     "Segoe UI Variable",
-    "Segoe UI",
 )
 
 _LOCK_HANDLE: TextIO | None = None
@@ -44,21 +50,22 @@ def default_ui_font() -> str:
 
 
 def apply_ui_font(root=None) -> str:
-    """בוחר גופן שקיים במחשב, Segoe ב־Windows, Noto/DejaVu בלינוקס."""
-    family = default_ui_font()
-    if root is not None or not is_windows():
+    """בוחר גופן עם עברית, גם במחשב רוסי או אנגלי."""
+    from core import textfix
+
+    family = textfix.pick_hebrew_font(root) if root is not None else default_ui_font()
+    if root is None and is_linux():
         try:
             import tkinter.font as tkfont
 
             names = {item.lower(): item for item in tkfont.families(root)}
-            candidates = WINDOWS_FONTS if is_windows() else LINUX_FONTS
-            for candidate in candidates:
+            for candidate in LINUX_FONTS:
                 hit = names.get(candidate.lower())
                 if hit:
                     family = hit
                     break
         except Exception:
-            pass
+            family = default_ui_font()
     ADHD_CONFIG["font_family"] = family
     return family
 

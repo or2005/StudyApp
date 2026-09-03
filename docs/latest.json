@@ -1,9 +1,9 @@
 {
-  "version": "4.5.3",
+  "version": "4.6.0",
   "released": "2026-09-03",
-  "notes": "תיקון עברית הפוכה במחשב Windows באנגלית, והורדת עדכון שלא נופל על 404. ההתקדמות בלימוד לא נמחקת.",
-  "windows_setup": "https://github.com/or2005/StudyApp/releases/download/v4.5.3/StudyApp-4.5.3-setup.exe",
-  "windows_zip": "https://github.com/or2005/StudyApp/releases/download/v4.5.3/StudyApp-4.5.3-windows.zip",
-  "linux_portable": "https://github.com/or2005/StudyApp/releases/download/v4.5.3/StudyApp-4.5.3-linux-portable.tar.gz",
-  "page": "https://github.com/or2005/StudyApp/releases/tag/v4.5.3"
+  "notes": "שפת עזר (עברית, אנגלית, רוסית, ערבית), עברית יציבה בכל Windows, ואנליסט תקלות חכם יותר. ההתקדמות בלימוד לא נמחקת.",
+  "windows_setup": "https://github.com/or2005/StudyApp/releases/download/v4.6.0/StudyApp-4.6.0-setup.exe",
+  "windows_zip": "https://github.com/or2005/StudyApp/releases/download/v4.6.0/StudyApp-4.6.0-windows.zip",
+  "linux_portable": "https://github.com/or2005/StudyApp/releases/download/v4.6.0/StudyApp-4.6.0-linux-portable.tar.gz",
+  "page": "https://github.com/or2005/StudyApp/releases/tag/v4.6.0"
 }

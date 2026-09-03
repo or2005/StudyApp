@@ -1,10 +1,11 @@
 import tkinter as tk
 
 from core.config import ADHD_CONFIG, COLORS, rtl
+from core.i18n import LANGS, LANG_LABELS, get_lang, set_lang, ui as i18n_ui
 from core.diagnostic import EXAM_LENGTH, build_diagnostic, compute_level
 from core.storage import UserStorage
 from ui.fast import TkButton
-from ui.widgets import ModernButton, ProgressBar, QuietFrame, body, heading, kicker, themed_entry, Page
+from ui.widgets import GhostButton, ModernButton, ProgressBar, QuietFrame, body, heading, kicker, themed_entry, Page
 
 
 class _ChoiceVar:
@@ -58,6 +59,16 @@ class OnboardingFrame(Page):
         card.pack(fill="x", pady=(4, 0))
 
         kicker(card, "שלב 1 מתוך 2  ·  הרשמה", bg=COLORS["card_bg"]).pack(pady=(24, 0), padx=36, anchor="e")
+        heading(card, i18n_ui("onboard.lang"), 16).pack(anchor="e", padx=36, pady=(8, 4))
+        lang_row = tk.Frame(card, bg=COLORS["card_bg"])
+        lang_row.pack(fill="x", padx=36, pady=(0, 8))
+        current = get_lang()
+        for code in LANGS:
+            maker = ModernButton if code == current else GhostButton
+            maker(
+                lang_row, text=rtl(LANG_LABELS[code]), height=36, width=110,
+                command=lambda c=code: self._pick_lang(c),
+            ).pack(side="right", padx=4)
         welcome = tk.Frame(card, bg=COLORS["card_bg"])
         welcome.pack(fill="x", padx=36, pady=(8, 6))
         from ui import skin
@@ -66,8 +77,8 @@ class OnboardingFrame(Page):
         if logo is not None:
             tk.Label(welcome, image=logo, bg=COLORS["card_bg"], bd=0).pack(side="right", padx=(10, 0))
             self._logo_photo = logo
-        heading(welcome, "ברוכים הבאים ל-StudyApp", 26).pack(side="right", fill="x", expand=True)
-        body(card, "רק שם וגיל. אחר כך מבחן קצר לקביעת הרמה.", muted=True, wrap=460).pack(
+        heading(welcome, i18n_ui("onboard.welcome"), 26).pack(side="right", fill="x", expand=True)
+        body(card, i18n_ui("onboard.body"), muted=True, wrap=460).pack(
             pady=(0, 10), padx=36
         )
         for line in (
@@ -87,9 +98,9 @@ class OnboardingFrame(Page):
         )
 
         rows = [
-            ("שם", self.name_var, "למשל: נועה"),
-            ("גיל", self.age_var, "למשל: 16"),
-            ("תעודת זהות (לא חובה)", self.id_var, "אפשר להשאיר ריק"),
+            (i18n_ui("onboard.name"), self.name_var, "למשל: נועה"),
+            (i18n_ui("onboard.age"), self.age_var, "למשל: 16"),
+            (i18n_ui("onboard.id"), self.id_var, "אפשר להשאיר ריק"),
         ]
         for title, var, _ph in rows:
             tk.Label(
@@ -103,7 +114,7 @@ class OnboardingFrame(Page):
 
         self.err_label.pack()
         ModernButton(
-            card, text=rtl("המשך למבחן אבחון"),
+            card, text=rtl(i18n_ui("onboard.continue")),
             fg_color=COLORS["primary"], hover_color=COLORS["primary_hover"],
             command=self._submit_details,
         ).pack(fill="x", padx=40, pady=(8, 28))
@@ -113,7 +124,7 @@ class OnboardingFrame(Page):
         age = self.age_var.get().strip()
         idn = self.id_var.get().strip()
         if not name or not age:
-            self.err_label.configure(text=rtl("נא למלא שם וגיל"))
+            self.err_label.configure(text=rtl(i18n_ui("onboard.need_name")))
             return
         if not age.isdigit() or not 5 <= int(age) <= 120:
             self.err_label.configure(text=rtl("הגיל צריך להיות מספר בין 5 ל-120"))
@@ -122,7 +133,20 @@ class OnboardingFrame(Page):
             self.err_label.configure(text=rtl("אם ממלאים ת\"ז: רק ספרות, 5 עד 9"))
             return
         self.storage.save_student(name, int(age), idn)
+        self.storage.set_pref("helper_lang", get_lang())
         self._stage("diagnostic")
+
+    def _pick_lang(self, code: str):
+        set_lang(code)
+        self.storage.set_pref("helper_lang", code)
+        name = self.name_var.get() if hasattr(self, "name_var") else ""
+        age = self.age_var.get() if hasattr(self, "age_var") else ""
+        idn = self.id_var.get() if hasattr(self, "id_var") else ""
+        self._stage("welcome")
+        if hasattr(self, "name_var"):
+            self.name_var.set(name)
+            self.age_var.set(age)
+            self.id_var.set(idn)
 
     def _build_diagnostic(self):
         self.questions = build_diagnostic()

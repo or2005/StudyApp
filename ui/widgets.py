@@ -383,14 +383,14 @@ class OptionTile(tk.Frame):
 class Sidebar(tk.Frame):
     """ניווט לבן מעוגל מימין, כמו במקאפ."""
 
-    NAV_ITEMS = [
-        ("dashboard", "הבית"),
-        ("meimad", "מבחן מימ״ד"),
-        ("general_exam", "מבחן כללי"),
-        ("mistakes", "הטעויות שלי"),
-        ("settings", "הגדרות"),
-        ("about", "אודות"),
-    ]
+    NAV_KEYS = (
+        ("dashboard", "nav.home"),
+        ("meimad", "nav.meimad"),
+        ("general_exam", "nav.general"),
+        ("mistakes", "nav.mistakes"),
+        ("settings", "nav.settings"),
+        ("about", "nav.about"),
+    )
     NAV_MARKS = {
         "dashboard": "⌂",
         "subjects": "▣",
@@ -437,7 +437,9 @@ class Sidebar(tk.Frame):
         )
         self.user_lbl.pack(pady=(2, 14), fill="x")
 
-        for key, label in self.NAV_ITEMS:
+        from core.i18n import ui as i18n_ui
+
+        for key, msg in self.NAV_KEYS:
             row = tk.Frame(host, bg=ink)
             row.pack(fill="x", pady=3)
             bar = tk.Frame(row, width=4, bg=ink)
@@ -452,9 +454,9 @@ class Sidebar(tk.Frame):
             mark_lbl.pack(side="right", padx=(4, 2))
             btn = TkButton(
                 row,
-                text=rtl(label),
+                text=rtl(i18n_ui(msg)),
                 font=(ADHD_CONFIG["font_family"], font_size(14)),
-                height=40,
+                height=48,
                 fg_color=ink,
                 hover_color=_c("sidebar_hover", COLORS["card_hover"]),
                 text_color=_c("sidebar_fg", COLORS["text_main"]),

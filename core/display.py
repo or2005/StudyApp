@@ -117,6 +117,12 @@ def apply_display_quality(root) -> float:
     """סנכרון tk scaling ל־DPI האמיתי, כדי שהגופן יצויר חד ולא יומתח."""
     global _SCALE
     enable_dpi_awareness()
+    try:
+        from core.textfix import apply_text_engine
+
+        apply_text_engine(root)
+    except Exception:
+        pass
     ppi = _window_ppi(root)
     _SCALE = max(1.0, min(ppi / 96.0, 3.0))
     try:

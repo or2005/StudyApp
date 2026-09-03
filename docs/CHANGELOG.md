@@ -1,5 +1,16 @@
 # Changelog
 
+## [4.6.0] - 2026-09-03
+
+### Added
+- Helper language for menus, errors, and the trouble scanner: Hebrew, English, Russian, Arabic
+- Placement and Settings can pick a helper language; questions stay in Hebrew
+- Explain-in-my-language coach on practice when a helper language is on
+
+### Updated
+- Hebrew display engine for English, Russian, Arabic, and other Windows locales (font + UTF-8 + word order)
+- Trouble scanner now fixes display, stale updates, leftover crashes, and explains in the helper language
+
 ## [4.5.3] - 2026-09-03
 
 ### Fixed

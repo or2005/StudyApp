@@ -1,18 +1,23 @@
 from tkinter import messagebox
 
 from core.config import rtl
+from core.i18n import ui as i18n_ui
 
 
 def info(title: str, text: str) -> None:
-    messagebox.showinfo(title, rtl(text))
+    messagebox.showinfo(rtl(title), rtl(text))
 
 
 def error(title: str, text: str) -> None:
-    messagebox.showerror(title, rtl(text))
+    messagebox.showerror(rtl(title), rtl(text))
 
 
 def confirm(title: str, text: str) -> bool:
-    return bool(messagebox.askyesno(title, rtl(text)))
+    return bool(messagebox.askyesno(rtl(title), rtl(text)))
+
+
+def cancel_label() -> str:
+    return i18n_ui("btn.cancel")
 
 
 def choose(title: str, text: str, options: list[str], parent=None) -> str | None:
@@ -51,7 +56,7 @@ def choose(title: str, text: str, options: list[str], parent=None) -> str | None
         ).pack(fill="x", padx=20, pady=3)
 
     TkButton(
-        win, text=rtl("ביטול"), command=lambda: pick(None),
+        win, text=rtl(cancel_label()), command=lambda: pick(None),
         fg_color=COLORS["card_bg"], hover_color=COLORS["card_hover"],
         text_color=COLORS["text_muted"],
         border_width=1, border_color=COLORS["card_border"],

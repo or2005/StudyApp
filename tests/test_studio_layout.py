@@ -24,10 +24,10 @@ class StudioLayoutTests(unittest.TestCase):
         self.root.destroy()
 
     def test_nav_items_are_plain_labels(self):
-        for item in Sidebar.NAV_ITEMS:
+        for item in Sidebar.NAV_KEYS:
             self.assertEqual(len(item), 2)
-            _key, label = item
-            self.assertFalse(any(ord(ch) > 9000 for ch in label), label)
+            _key, msg = item
+            self.assertFalse(any(ord(ch) > 9000 for ch in msg), msg)
 
     def test_sidebar_active_uses_bar_not_green_fill(self):
         side = Sidebar(self.root, on_nav=lambda _k: None)
@@ -242,7 +242,8 @@ class AppChromeTests(unittest.TestCase):
         self.assertNotIn("יומן תקלות", blob)
         self.assertNotIn("עורך שאלות", blob)
         self.assertNotIn("בדיקת התראה", blob)
-        self.assertNotIn("עדכוני תוכנה", blob)
+        self.assertIn("עדכוני תוכנה", blob)
+        self.assertIn("שפת עזר", blob)
         app._set_theme("Dark")
         app.update()
         self.assertEqual(app.active_tab, "settings")

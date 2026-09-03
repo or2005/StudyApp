@@ -50,6 +50,13 @@ def main() -> int:
     except Exception:
         pass
 
+    try:
+        from core.textfix import force_utf8
+
+        force_utf8()
+    except Exception:
+        pass
+
     _windows_dpi()
     try:
         from core.nativeos import bind_app_identity

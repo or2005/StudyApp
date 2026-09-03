@@ -138,6 +138,13 @@ class PracticeScreen(Page):
         if self.speaker is not None and self.speaker.enabled:
             GhostButton(bar, text=rtl("🔊 הקראה"), width=120,
                         command=lambda: self.speaker.say(q.get("question", ""))).pack(side="left", padx=4)
+        from core.i18n import get_lang, ui as i18n_ui
+
+        if get_lang() != "he":
+            GhostButton(
+                bar, text=rtl(i18n_ui("btn.explain")), width=180,
+                command=self._explain_helper,
+            ).pack(side="left", padx=4)
 
         total = self.session.get_total()
         current = self.session.current_index + 1
@@ -342,6 +349,12 @@ class PracticeScreen(Page):
     def _report(self, question):
         if self.on_report:
             self.on_report(question)
+
+    def _explain_helper(self):
+        from core import dialogs
+        from core.i18n import block, ui as i18n_ui
+
+        dialogs.info(i18n_ui("explain.title"), block("explain.body"))
 
     def _skip(self):
         if self._locked or self.session.mode in {"final", "general"}:

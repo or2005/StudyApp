@@ -14,7 +14,7 @@ except ModuleNotFoundError as exc:
         "חסרה החבילה customtkinter. התקינו עם: pip install -r requirements.txt"
     ) from exc
 
-from core import applog, dialogs, studio_brief, theme
+from core import applog, dialogs, i18n, studio_brief, theme
 from core.adaptive_engine import LEVEL_HE, AdaptiveEngine, session_params
 from core.analytics import AnalyticsEngine
 from core.config import (
@@ -110,6 +110,10 @@ class StudyApp(ctk.CTk):
         apply_display_quality(self)
 
         self.storage = UserStorage()
+        from core import i18n, textfix
+
+        saved = self.storage.get_pref(i18n.PREF_KEY)
+        i18n.set_lang(saved or textfix.guess_helper())
         theme.apply_mode(self.storage.get_pref("appearance", "Light"))
         ADHD_CONFIG["font_delta"] = int(self.storage.get_pref("font_delta", 0) or 0)
 
@@ -552,7 +556,16 @@ class StudyApp(ctk.CTk):
         try:
             from core import health
 
-            health.scan_and_repair()
+            report = health.scan_and_repair(self)
+            if report.get("crash"):
+                from core.i18n import block, ui as i18n_ui
+
+                self._ui_after(
+                    0,
+                    lambda: self._safe_ui(
+                        lambda: dialogs.info(i18n_ui("dlg.health"), block("crash.boot"))
+                    ),
+                )
         except Exception as exc:
             log.info("health scan skipped: %s", exc)
         if self.storage.get_pref("auto_update_check", True):
@@ -581,11 +594,11 @@ class StudyApp(ctk.CTk):
         row = tk.Frame(inner, bg=COLORS["card_bg"])
         row.pack(fill="x", pady=(8, 0))
         ModernButton(
-            row, text=rtl("עדכן עכשיו"), width=160,
+            row, text=rtl(i18n.ui("btn.update_now")), width=180,
             command=self._install_pending_update,
         ).pack(side="right", padx=5)
         GhostButton(
-            row, text=rtl("הגדרות"), width=120,
+            row, text=rtl(i18n.ui("nav.settings")), width=140,
             command=lambda: self._nav("settings"),
         ).pack(side="right", padx=5)
 
@@ -963,13 +976,26 @@ class StudyApp(ctk.CTk):
             on_test_notify=self._test_notify,
             on_secret=self._open_studio,
             on_health=self._run_health_scan,
+            on_helper_lang=self._set_helper_lang,
+            helper_lang=i18n.get_lang(),
         ).pack(fill="both", expand=True)
+
+    def _set_helper_lang(self, code: str):
+        i18n.set_lang(code)
+        self.storage.set_pref(i18n.PREF_KEY, code)
+        try:
+            self.sidebar.destroy()
+        except Exception:
+            pass
+        self.sidebar = Sidebar(self, on_nav=self._nav)
+        self._chrome_state = None
+        self._show_settings()
 
     def _run_health_scan(self):
         from core import health
 
-        report = health.scan_and_repair()
-        dialogs.info("בדיקת תקלות", report.get("message") or "הבדיקה הסתיימה.")
+        report = health.scan_and_repair(self)
+        dialogs.info(i18n.ui("dlg.health"), report.get("message") or i18n.block("health.ok", version=VERSION))
         if self.active_tab == "settings":
             self._show_settings()
 

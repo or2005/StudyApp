@@ -358,7 +358,9 @@ def download_and_apply(info: dict[str, Any], on_progress=None) -> dict[str, Any]
                 os.startfile(page)  # noqa: S606
             except Exception:
                 pass
-        return {"ok": False, "message": "אין קישור הורדה. פורסם עמוד ההורדות, או התקינו מקובץ."}
+        from core.i18n import block
+
+        return {"ok": False, "message": block("update.no_url")}
     folder = os.path.join(os.environ.get("LOCALAPPDATA") or tempfile.gettempdir(), "StudyApp", "updates")
     os.makedirs(folder, exist_ok=True)
     last_err: Exception | None = None
@@ -372,5 +374,7 @@ def download_and_apply(info: dict[str, Any], on_progress=None) -> dict[str, Any]
             _log().info("download failed %s: %s", url, exc)
             continue
         return apply_local_file(dest)
-    hint = f"\nאפשר להוריד ידנית:\n{page}" if page else ""
-    return {"ok": False, "message": f"ההורדה נכשלה: {last_err}{hint}"}
+    from core.i18n import block
+
+    hint = f"\n{block('update.manual')}\n{page}" if page else ""
+    return {"ok": False, "message": block("update.download_fail", err=last_err) + hint}
