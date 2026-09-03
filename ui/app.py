@@ -563,6 +563,9 @@ class StudyApp(ctk.CTk):
         if not isinstance(pending, dict) or not pending.get("newer"):
             return
         latest = pending.get("latest") or ""
+        if not updates.is_newer(str(latest), VERSION):
+            self.storage.set_pref("pending_update", {})
+            return
         card, inner = make_card(parent, accent=COLORS["primary"], pady=12)
         card.pack(fill="x", pady=(0, 10))
         fast_label(
@@ -651,6 +654,10 @@ class StudyApp(ctk.CTk):
             dialogs.info("עדכון", "אין עדכון ממתין. לחצו «בדוק עדכון» קודם, או התקינו מקובץ.")
             return
         latest = pending.get("latest") or ""
+        if not updates.is_newer(str(latest), VERSION):
+            self.storage.set_pref("pending_update", {})
+            dialogs.info("עדכון", "התוכנה כבר מעודכנת.")
+            return
         if not dialogs.confirm(
             "עדכון",
             f"להוריד ולהתקין גרסה {latest}?\nההתקדמות בלימוד לא תימחק. התוכנה עלולה להיסגר לרגע.",

@@ -56,7 +56,9 @@ def bug(msg: str) -> None:
 
 
 def strip_rtl(text: str) -> str:
-    return (text or "").replace("\u200f", "").replace("\u200e", "").strip()
+    from core.rtltext import strip_marks
+
+    return strip_marks(text or "").strip()
 
 
 def walk(widget):

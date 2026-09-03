@@ -84,7 +84,9 @@ def practice_screen(app):
 def click_named(root, *needles: str) -> bool:
     for w in walk(root):
         try:
-            txt = str(w.cget("text") or "").replace("\u200f", "").replace("\u200e", "")
+            from core.rtltext import strip_marks
+
+            txt = strip_marks(str(w.cget("text") or ""))
         except Exception:
             continue
         if w.__class__.__name__ not in {"CTkButton", "ModernButton", "GhostButton", "TkButton", "FastButton"}:

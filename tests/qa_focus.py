@@ -31,7 +31,9 @@ BUGS = []
 
 
 def rtl_strip(t):
-    return (t or "").replace("\u200f", "").replace("\u200e", "")
+    from core.rtltext import strip_marks
+
+    return strip_marks(t or "")
 
 
 def walk(w):

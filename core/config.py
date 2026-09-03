@@ -20,7 +20,7 @@ ICON_PATH: Final[str] = os.path.join(ASSETS_DIR, "icon.ico")
 ICON_PNG_PATH: Final[str] = os.path.join(ASSETS_DIR, "icon.png")
 APP_TITLE: Final[str] = "StudyApp"
 APP_NAME: Final[str] = "StudyApp"
-VERSION: Final[str] = "4.5.2"
+VERSION: Final[str] = "4.5.3"
 FONT_FAMILY: Final[str] = "Segoe UI"
 
 DEVELOPER_NAME: Final[str] = "אור דדשב"
@@ -56,9 +56,9 @@ GENERAL_EXAM_COVERAGE: Final[float] = 0.50
 
 
 def rtl(text: str) -> str:
-    if not text:
-        return text
-    return "\u200f" + text + "\u200f"
+    from core.rtltext import apply
+
+    return apply(text)
 
 
 # ערכת הצבעים הפעילה. core/theme.py מחליף את התוכן במקום בעת מעבר בהיר/כהה.
@@ -293,7 +293,9 @@ def subject_key(value: str) -> str:
         return aliases[raw]
     if raw in SUBJECTS:
         return raw
-    cleaned = raw.replace("\u200f", "").strip()
+    from core.rtltext import strip_marks
+
+    cleaned = strip_marks(raw).strip()
     for key, info in SUBJECTS.items():
         if info["name"] in cleaned or cleaned.startswith(info["name"]):
             return key

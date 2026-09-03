@@ -1,5 +1,11 @@
 # Changelog
 
+## [4.5.3] - 2026-09-03
+
+### Fixed
+- Hebrew no longer appears reversed on English Windows
+- In-app update retries the ZIP if the setup file is missing, and hides a stale "update" after you are already current
+
 ## [4.5.2] - 2026-09-03
 
 ### Added

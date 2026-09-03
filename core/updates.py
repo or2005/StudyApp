@@ -172,9 +172,21 @@ def check_latest(current: str = VERSION) -> dict[str, Any]:
 
 
 def preferred_download(info: dict[str, Any]) -> str:
+    urls = download_candidates(info)
+    return urls[0] if urls else ""
+
+
+def download_candidates(info: dict[str, Any]) -> list[str]:
     if os.name == "nt":
-        return str(info.get("windows_setup") or info.get("windows_zip") or "")
-    return str(info.get("linux_portable") or "")
+        keys = ("download", "windows_setup", "windows_zip")
+    else:
+        keys = ("download", "linux_portable")
+    found: list[str] = []
+    for key in keys:
+        url = str(info.get(key) or "").strip()
+        if url and url not in found:
+            found.append(url)
+    return found
 
 
 def download_file(url: str, dest: str, on_progress: Callable[[int, int], None] | None = None) -> str:
@@ -338,9 +350,9 @@ if exist "{exe}" (
 
 
 def download_and_apply(info: dict[str, Any], on_progress=None) -> dict[str, Any]:
-    url = str(info.get("download") or preferred_download(info) or "")
-    if not url:
-        page = info.get("page") or ""
+    urls = download_candidates(info)
+    page = str(info.get("page") or "")
+    if not urls:
         if page:
             try:
                 os.startfile(page)  # noqa: S606
@@ -349,10 +361,16 @@ def download_and_apply(info: dict[str, Any], on_progress=None) -> dict[str, Any]
         return {"ok": False, "message": "אין קישור הורדה. פורסם עמוד ההורדות, או התקינו מקובץ."}
     folder = os.path.join(os.environ.get("LOCALAPPDATA") or tempfile.gettempdir(), "StudyApp", "updates")
     os.makedirs(folder, exist_ok=True)
-    name = url.split("?")[0].rstrip("/").split("/")[-1] or "studyapp-update.bin"
-    dest = os.path.join(folder, name)
-    try:
-        download_file(url, dest, on_progress)
-    except Exception as exc:
-        return {"ok": False, "message": f"ההורדה נכשלה: {exc}"}
-    return apply_local_file(dest)
+    last_err: Exception | None = None
+    for url in urls:
+        name = url.split("?")[0].rstrip("/").split("/")[-1] or "studyapp-update.bin"
+        dest = os.path.join(folder, name)
+        try:
+            download_file(url, dest, on_progress)
+        except Exception as exc:
+            last_err = exc
+            _log().info("download failed %s: %s", url, exc)
+            continue
+        return apply_local_file(dest)
+    hint = f"\nאפשר להוריד ידנית:\n{page}" if page else ""
+    return {"ok": False, "message": f"ההורדה נכשלה: {last_err}{hint}"}

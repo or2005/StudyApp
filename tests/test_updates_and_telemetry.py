@@ -23,9 +23,21 @@ class VersionCompareTests(unittest.TestCase):
         self.assertFalse(updates.is_newer("4.3.0", "4.3.0"))
         self.assertFalse(updates.is_newer("4.2.9", "4.3.0"))
 
-    def test_current_version_is_452(self):
-        self.assertEqual(VERSION, "4.5.2")
+    def test_current_version_is_453(self):
+        self.assertEqual(VERSION, "4.5.3")
         self.assertFalse(updates.is_newer(VERSION, VERSION))
+
+    def test_download_candidates_prefer_setup_then_zip(self):
+        urls = updates.download_candidates({
+            "download": "https://example.com/StudyApp-4.5.3-setup.exe",
+            "windows_setup": "https://example.com/StudyApp-4.5.3-setup.exe",
+            "windows_zip": "https://example.com/StudyApp-4.5.3-windows.zip",
+            "linux_portable": "https://example.com/linux.tar.gz",
+        })
+        self.assertTrue(urls)
+        if os.name == "nt":
+            self.assertEqual(urls[0], "https://example.com/StudyApp-4.5.3-setup.exe")
+            self.assertIn("https://example.com/StudyApp-4.5.3-windows.zip", urls)
 
 
 class LocalUpdateTests(unittest.TestCase):
