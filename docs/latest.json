@@ -1,9 +1,9 @@
 {
-  "version": "4.6.1",
+  "version": "4.7.0",
   "released": "2026-09-03",
-  "notes": "תיקון עברית הפוכה במחשב אנגלית/רוסית. בהגדרות יש «תקן עברית» אם עדיין הפוך. ההתקדמות בלימוד לא נמחקת.",
-  "windows_setup": "https://github.com/or2005/StudyApp/releases/download/v4.6.1/StudyApp-4.6.1-setup.exe",
-  "windows_zip": "https://github.com/or2005/StudyApp/releases/download/v4.6.1/StudyApp-4.6.1-windows.zip",
-  "linux_portable": "https://github.com/or2005/StudyApp/releases/download/v4.6.1/StudyApp-4.6.1-linux-portable.tar.gz",
-  "page": "https://github.com/or2005/StudyApp/releases/tag/v4.6.1"
+  "notes": "שאלות מנוסחות כמשימה ברורה (זמן, הגדרה, רבים) בלי משפטים הפוכים או מבלבלים. אנגלית וחשבון קריאים ב-Windows לועזי. ההתקדמות בלימוד לא נמחקת.",
+  "windows_setup": "https://github.com/or2005/StudyApp/releases/download/v4.7.0/StudyApp-4.7.0-setup.exe",
+  "windows_zip": "https://github.com/or2005/StudyApp/releases/download/v4.7.0/StudyApp-4.7.0-windows.zip",
+  "linux_portable": "https://github.com/or2005/StudyApp/releases/download/v4.7.0/StudyApp-4.7.0-linux-portable.tar.gz",
+  "page": "https://github.com/or2005/StudyApp/releases/tag/v4.7.0"
 }

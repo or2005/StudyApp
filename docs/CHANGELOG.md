@@ -3,6 +3,7 @@
 ## [4.7.0] - 2026-09-03
 
 ### Fixed
+- Confusing stems rewritten: «אתמול רצתי הוא» → «באיזה זמן כתוב…», «אושוויץ היה» → «מה היה אושוויץ?», plurals, parts of speech, and English «in spite of =»
 - English and math no longer reverse on English Windows (punctuation and formulas stay readable)
 - Practice questions explain what is being asked, not only «pick an answer»
 - Short stems like «נרדפת למהיר», «APPLE זה» and «הניגוד של כהה» are written as full questions

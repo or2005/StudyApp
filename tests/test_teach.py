@@ -134,8 +134,16 @@ class TeachTests(unittest.TestCase):
             "מה המשמעות של «APPLE»?",
         )
         self.assertEqual(
+            clarify_stem({"question": "'תלמידה' הוא"}),
+            "מהו חלקי הדיבר של «תלמידה»?",
+        )
+        self.assertEqual(
             clarify_stem({"question": "מים שפירים הם"}),
             "מהם מים שפירים?",
+        )
+        self.assertEqual(
+            clarify_stem({"question": "מה רבים של ספר?"}),
+            "מה צורת הרבים של «ספר»?",
         )
         self.assertEqual(
             clarify_stem({"question": "25% מ־80 הם"}),
@@ -152,8 +160,39 @@ class TeachTests(unittest.TestCase):
         self.assertIn("משמעות", clarify_stem({"question": "بيت בערבית זה"}))
         self.assertTrue(clarify_stem({"question": "also משמש ל"}).startswith("למה"))
         self.assertEqual(
-            clarify_stem({"question": "מה המשמעות של «APPLE»?"}),
-            "מה המשמעות של «APPLE»?",
+            clarify_stem({"question": "'אתמול רצתי' הוא"}),
+            "באיזה זמן כתוב «אתמול רצתי»?",
+        )
+        self.assertEqual(
+            clarify_stem({"question": "מהו אתמול רצתי?"}),
+            "באיזה זמן כתוב «אתמול רצתי»?",
+        )
+        self.assertEqual(
+            clarify_stem({"question": "אושוויץ היה"}),
+            "מה היה אושוויץ?",
+        )
+        self.assertEqual(
+            clarify_stem({"question": "מה אושוויץ היה?"}),
+            "מה היה אושוויץ?",
+        )
+        self.assertEqual(
+            clarify_stem({"question": "רבים של ספר"}),
+            "מה צורת הרבים של «ספר»?",
+        )
+        self.assertEqual(
+            clarify_stem({"question": "לוואי מתאר"}),
+            "את מה מתאר הלוואי במשפט?",
+        )
+        self.assertEqual(
+            clarify_stem({"question": "לתמוך בטענה"}),
+            "מה פירוש «לתמוך בטענה»?",
+        )
+        self.assertEqual(
+            clarify_stem({"question": "in spite of ="}),
+            "מה המשמעות של «in spite of» באנגלית?",
+        )
+        self.assertTrue(
+            clarify_stem({"question": "'אל תרוץ' הוא"}).startswith("מה צורת הציווי")
         )
 
     def test_task_prompt_explains_without_leaking_answer(self):

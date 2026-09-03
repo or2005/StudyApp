@@ -911,3 +911,11 @@ from core.compose_bank_extra import EXTRA_BANK
 
 for _key, _extra in EXTRA_BANK.items():
     COMPOSE_BANK[_key] = list(COMPOSE_BANK.get(_key) or []) + list(_extra)
+
+try:
+    from core.compose_wave2 import WAVE2_BANK
+
+    for _key, _extra in WAVE2_BANK.items():
+        COMPOSE_BANK[_key] = list(COMPOSE_BANK.get(_key) or []) + list(_extra)
+except Exception:
+    pass

@@ -26,6 +26,9 @@ def _junk_option(correct: str, text: str, prompt: str = "") -> bool:
     if got == want:
         return False
     if len(got) == 1 and not got.isdigit():
+        # a / I באנגלית הן תשובות לגיטימיות (תווית).
+        if got.lower() in {"a", "i"}:
+            return False
         return True
     if got.endswith("ון") and len(got) > 3:
         base = got[:-2]

@@ -43,6 +43,15 @@ _MEANS = re.compile(r"^(.+?)\s+(?:פירושו|פירושה|משמע|משמעו)
 _SAYS = re.compile(r"^(.+?)\s+אומר(?:ת)?(?:\s+למורה)?\s*\??$")
 _CLOSE_HE = re.compile(r"^(.+?)\s+קרוב למילה העברית\s*\??$")
 _ROLE_IN = re.compile(r"^(פועל|לוואי|נשוא|נושא|מושא|פסוקית זיקה)\s+(ב.*)$")
+_WAS = re.compile(r"^(.+?)\s+(היה|הייתה|היו)\s*\??$")
+_PLURAL_OF = re.compile(r"^(?:מה\s+)?רבים של\s*[«\"']?(.+?)[»\"']?\s*\??$")
+_BELONGS = re.compile(r"^(.+?)\s+(שייכת|קשורה|קשור)\s+ל\s*\??$")
+_EQ_EN = re.compile(r"^([A-Za-z][A-Za-z '\-]{1,40})\s*=\s*$")
+_BAD_MAHU = re.compile(r"^מהו\s+(.+?)\s*\??$")
+_BAD_MA_WAS = re.compile(r"^מה\s+(.+?)\s+(היה|הייתה|היו)\s*\??$")
+_BAD_MA_INF = re.compile(r"^מה\s+(ל[א-ת][\u0590-\u05FF].*?)\s*\??$")
+_TENSE_HINT = re.compile(r"(אתמול|מחר|עכשיו|היום|תמיד)")
+_IMP_HINT = re.compile(r"^אל\s+")
 
 GENERIC_HINTS = {
     "קראו שוב את השאלה. מה בדיוק מבקשים למצוא?",
@@ -207,7 +216,7 @@ def _clean_word(text: str) -> str:
 
 
 def _unwrap_weak_stem(stem: str) -> str:
-    """מסיר ניסוח גנרי ישן כדי שאפשר יהיה לנסח מחדש."""
+    """מסיר ניסוח גנרי או הפוך ישן כדי שאפשר יהיה לנסח מחדש."""
     text = stem.strip()
     if text.startswith(_GENERIC_PREFIX):
         text = text[len(_GENERIC_PREFIX):].strip()
@@ -217,6 +226,27 @@ def _unwrap_weak_stem(stem: str) -> str:
     )
     if inverted_pct:
         return f"{inverted_pct.group(1)}% מ־{inverted_pct.group(2)} הם"
+    bad_was = _BAD_MA_WAS.match(text)
+    if bad_was:
+        return f"{bad_was.group(1)} {bad_was.group(2)}"
+    bad_inf = _BAD_MA_INF.match(text)
+    if bad_inf:
+        return bad_inf.group(1)
+    if text.startswith("מה רבים של "):
+        return text.removeprefix("מה ").rstrip("?").strip()
+    if text.startswith("מה לוואי מתאר"):
+        return "לוואי מתאר"
+    if text.startswith((
+        "מהו חלקי הדיבר", "באיזה זמן ", "מה צורת ", "מה המשמעות של ",
+        "כמה הם ", "את מה מתאר", "מה היה ", "מה הייתה ", "מה היו ",
+        "מה פירוש ", "מי היה ", "לאיזה שורש ", "איזו מילה ",
+    )):
+        return text
+    mahu = _BAD_MAHU.match(text)
+    if mahu:
+        body = mahu.group(1).strip(" «»\"'")
+        if _TENSE_HINT.search(body) or _IMP_HINT.match(body):
+            return f"'{body}' הוא"
     inverted = _INVERTED_COP.match(text)
     if (
         inverted
@@ -226,6 +256,19 @@ def _unwrap_weak_stem(stem: str) -> str:
     ):
         return f"{inverted.group(1)} {inverted.group(2)}"
     return text
+
+
+def _copula_question(noun: str, verb: str) -> str:
+    """«X הוא» — זמן / ציווי / חלקי דיבר / הגדרה."""
+    clean = _clean_word(noun)
+    if _IMP_HINT.match(clean):
+        return f"מה צורת הציווי במשפט «{clean}»?"
+    if _TENSE_HINT.search(clean):
+        return f"באיזה זמן כתוב «{clean}»?"
+    if len(clean.split()) == 1 and _HEB.search(clean):
+        return f"מהו חלקי הדיבר של «{clean}»?"
+    prefix = _COPULA_WORD.get(verb, "מהו")
+    return f"{prefix} {clean}?"
 
 
 def _as_question(stem: str) -> str:
@@ -242,8 +285,23 @@ def _as_question(stem: str) -> str:
         return f"איזה {text}?"
     if text.startswith(("בירת ", "יחידת ")):
         return f"מהי {text}?"
-    if _HEB.search(text):
-        return f"מה {text}?"
+    if text.startswith("ל") and len(text) >= 5 and " " in text and _HEB.search(text):
+        return f"מה פירוש «{text}»?"
+    if re.match(r"^(הקמת|מלחמת|הצהרת)\b", text):
+        return f"מה הייתה {text}?"
+    if text.startswith("הסכמי ") or text.startswith("רצח "):
+        return f"מה היו {text}?"
+    if text.startswith("קונגרס "):
+        return f"מה היה {text}?"
+    # שני שמות פרטיים/משפחה בלי פועל — לרוב דמות בהיסטוריה.
+    words = text.split()
+    if len(words) == 2 and all(_HEB.search(w) and len(w) >= 2 for w in words):
+        if not any(w in {"של", "את", "על", "עם", "מן", "אל"} for w in words):
+            return f"מי היה {text}?"
+    if len(words) <= 4 and _HEB.search(text):
+        if text.endswith(("ה", "ת", "ות", "ים", "ין")) and len(words) <= 3:
+            return f"מהי {text}?"
+        return f"מהו {text}?"
     return text
 
 
@@ -270,6 +328,24 @@ def _rewrite_stem(stem: str) -> str:
     pct = _PCT.match(stem)
     if pct:
         return f"כמה הם {pct.group(1)}% מ־{pct.group(2)}?"
+    plural = _PLURAL_OF.match(stem)
+    if plural:
+        return f"מה צורת הרבים של «{_clean_word(plural.group(1))}»?"
+    if re.match(r"^לוואי מתאר\s*\??$", stem):
+        return "את מה מתאר הלוואי במשפט?"
+    was = _WAS.match(stem)
+    if was and not _ALREADY_ASK.match(stem):
+        noun = was.group(1).strip(" «»\"'")
+        verb = was.group(2)
+        if verb == "היו":
+            return f"מה היו {noun}?"
+        return f"מה {verb} {noun}?"
+    belongs = _BELONGS.match(stem)
+    if belongs:
+        return f"לאיזה שורש {belongs.group(2)} «{_clean_word(belongs.group(1))}»?"
+    eq_en = _EQ_EN.match(stem)
+    if eq_en:
+        return f"מה המשמעות של «{eq_en.group(1).strip()}» באנגלית?"
     zeh = _ZEH.match(stem)
     if zeh:
         body = zeh.group(1).strip(" «»\"'")
@@ -312,8 +388,6 @@ def _rewrite_stem(stem: str) -> str:
         return f"מהו ה{role.group(1)} {role.group(2).rstrip('?')}?"
     if " כמו " in stem and re.search(r"\sל\s*\??$", stem):
         return f"השלימו את האנלוגיה: {stem.rstrip('?').strip()} ____"
-    if re.search(r"(קשור(?:ים|ה)|שייכת|המשותף)\s*ל?\s*\??$", stem):
-        return f"לאיזה שורש או נושא {stem.rstrip('?').strip()}?"
     choose = _CHOOSE_EN.match(stem)
     if choose:
         rest = choose.group(1).strip(" :.")
@@ -339,9 +413,14 @@ def _rewrite_stem(stem: str) -> str:
         return f"בחרו את הביטוי או את המשפט שמתאים ל: {stem}"
     copula = _HE_COPULA.match(stem)
     if copula and not _ALREADY_ASK.match(stem):
-        noun, verb = copula.group(1).strip(" «»\"'"), copula.group(2)
-        prefix = _COPULA_WORD.get(verb, "מהו")
-        return f"{prefix} {noun}?"
+        return _copula_question(copula.group(1), copula.group(2))
+    # כבר שאלה טובה — לא לגעת.
+    if stem.startswith((
+        "איזו מילה ", "באיזה זמן ", "מה צורת ", "מה המשמעות של ", "כמה הם ",
+        "למה משמש", "את מה מתאר", "מה היה ", "מה הייתה ", "מה היו ",
+        "מה פירוש ", "מי היה ", "לאיזה שורש ",
+    )):
+        return stem
     if _ALREADY_ASK.match(stem):
         return stem if stem.endswith("?") or len(stem) > 18 else f"{stem.rstrip('?')}?"
     if (
@@ -359,14 +438,16 @@ def clarify_stem(question: dict[str, Any] | None) -> str:
     stem = str((question or {}).get("question") or "").strip()
     if not stem:
         return ""
-    if stem.startswith("איזו מילה ") or stem.startswith("השלימו את החסר") or stem.startswith("מה צורת"):
-        return stem
-    if stem.startswith("מה המשמעות של") or stem.startswith("כמה הם ") or stem.startswith("למה משמש"):
+    if stem.startswith((
+        "איזו מילה ", "באיזה זמן ", "מה צורת ", "מה המשמעות של ", "כמה הם ",
+        "למה משמש", "את מה מתאר", "מה היה ", "מה הייתה ", "מה היו ",
+        "מה פירוש ", "מי היה ", "לאיזה שורש ", "מהו חלקי הדיבר",
+        "השלימו את החסר",
+    )):
         return stem
     rewritten = _rewrite_stem(_unwrap_weak_stem(stem))
-    if rewritten.startswith(_GENERIC_PREFIX):
-        rewritten = _rewrite_stem(_unwrap_weak_stem(rewritten))
-    return rewritten
+    again = _rewrite_stem(_unwrap_weak_stem(rewritten))
+    return again
 
 
 def task_prompt(question: dict[str, Any] | None) -> str:

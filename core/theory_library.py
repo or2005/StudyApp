@@ -2103,3 +2103,10 @@ EXTRA_LESSONS: dict[str, list[tuple[str, str, str]]] = {
         ),
     ],
 }
+
+try:
+    from core.theory_wave2 import merge_into as _merge_theory_wave2
+
+    _merge_theory_wave2(DEPTH, EXTRA_LESSONS)
+except Exception:
+    pass
