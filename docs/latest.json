@@ -1,9 +1,9 @@
 {
-  "version": "4.6.0",
+  "version": "4.6.1",
   "released": "2026-09-03",
-  "notes": "שפת עזר (עברית, אנגלית, רוסית, ערבית), עברית יציבה בכל Windows, ואנליסט תקלות חכם יותר. ההתקדמות בלימוד לא נמחקת.",
-  "windows_setup": "https://github.com/or2005/StudyApp/releases/download/v4.6.0/StudyApp-4.6.0-setup.exe",
-  "windows_zip": "https://github.com/or2005/StudyApp/releases/download/v4.6.0/StudyApp-4.6.0-windows.zip",
-  "linux_portable": "https://github.com/or2005/StudyApp/releases/download/v4.6.0/StudyApp-4.6.0-linux-portable.tar.gz",
-  "page": "https://github.com/or2005/StudyApp/releases/tag/v4.6.0"
+  "notes": "תיקון עברית הפוכה במחשב אנגלית/רוסית. בהגדרות יש «תקן עברית» אם עדיין הפוך. ההתקדמות בלימוד לא נמחקת.",
+  "windows_setup": "https://github.com/or2005/StudyApp/releases/download/v4.6.1/StudyApp-4.6.1-setup.exe",
+  "windows_zip": "https://github.com/or2005/StudyApp/releases/download/v4.6.1/StudyApp-4.6.1-windows.zip",
+  "linux_portable": "https://github.com/or2005/StudyApp/releases/download/v4.6.1/StudyApp-4.6.1-linux-portable.tar.gz",
+  "page": "https://github.com/or2005/StudyApp/releases/tag/v4.6.1"
 }

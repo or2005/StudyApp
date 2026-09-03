@@ -1,19 +1,15 @@
-# StudyApp, Release Notes 4.6.0
+# StudyApp, Release Notes 4.6.1
 
 ## Overview
-StudyApp is a Hebrew-first **desktop** study app. It runs on **Windows 10**, **Windows 11**, and **Linux** (no browser).
+StudyApp is a Hebrew-first **desktop** study app.
 
 ## Downloads
-- Windows 10/11: `StudyApp-4.6.0-setup.exe` or `StudyApp-4.6.0-windows.zip` → `StudyApp.exe`
-- Linux (all common distros): `StudyApp-4.6.0-linux-portable.tar.gz` → `./StudyApp.sh`
+- Windows: `StudyApp-4.6.1-setup.exe` or `StudyApp-4.6.1-windows.zip`
+- Linux: `StudyApp-4.6.1-linux-portable.tar.gz`
 
 ## What's new
-- Helper language: Hebrew, English, Russian, Arabic for menus and errors
-- Hebrew stays readable on non-Hebrew Windows
-- Smarter trouble scanner that repairs and explains in the helper language
-
-## Notes
-Educational support tool. Not an official Bagrut or Meimad exam.
+- Hebrew stays readable on English and Russian Windows
+- Settings: Fix Hebrew / Fix letters if text is still backwards
 
 ## License
 MIT License. Copyright (c) 2026 Or Dadshaev.

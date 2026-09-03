@@ -1,5 +1,11 @@
 # Changelog
 
+## [4.6.1] - 2026-09-03
+
+### Fixed
+- Hebrew no longer flips back to gibberish on English/Russian Windows (removed bidi marks that undid the fix)
+- Settings: Fix Hebrew / Fix letters if words or letters are still reversed
+
 ## [4.6.0] - 2026-09-03
 
 ### Added

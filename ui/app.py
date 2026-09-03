@@ -114,6 +114,9 @@ class StudyApp(ctk.CTk):
 
         saved = self.storage.get_pref(i18n.PREF_KEY)
         i18n.set_lang(saved or textfix.guess_helper())
+        from core import rtltext
+
+        rtltext.set_mode(str(self.storage.get_pref("hebrew_fix") or "auto"))
         theme.apply_mode(self.storage.get_pref("appearance", "Light"))
         ADHD_CONFIG["font_delta"] = int(self.storage.get_pref("font_delta", 0) or 0)
 
@@ -978,7 +981,22 @@ class StudyApp(ctk.CTk):
             on_health=self._run_health_scan,
             on_helper_lang=self._set_helper_lang,
             helper_lang=i18n.get_lang(),
+            on_hebrew_fix=self._set_hebrew_fix,
+            hebrew_fix=str(self.storage.get_pref("hebrew_fix") or "auto"),
         ).pack(fill="both", expand=True)
+
+    def _set_hebrew_fix(self, mode: str):
+        from core import rtltext
+
+        rtltext.set_mode(mode)
+        self.storage.set_pref("hebrew_fix", mode)
+        try:
+            self.sidebar.destroy()
+        except Exception:
+            pass
+        self.sidebar = Sidebar(self, on_nav=self._nav)
+        self._chrome_state = None
+        self._show_settings()
 
     def _set_helper_lang(self, code: str):
         i18n.set_lang(code)

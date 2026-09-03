@@ -20,7 +20,8 @@ class SettingsScreen(Page):
                  on_toggle_autostart=None, autostart_on=False,
                  on_toggle_reminder=None, reminder_on=False, reminder_time="17:00",
                  on_save_reminder_time=None,                  on_install_shortcuts=None, on_test_notify=None, on_secret=None,
-                 on_health=None, on_helper_lang=None, helper_lang="he"):
+                 on_health=None, on_helper_lang=None, helper_lang="he",
+                 on_hebrew_fix=None, hebrew_fix="auto"):
         super().__init__(master)
         self.storage = storage
         self.on_exam_date = on_exam_date
@@ -37,6 +38,12 @@ class SettingsScreen(Page):
             (LANG_LABELS[code], code == helper_lang, lambda c=code: on_helper_lang(c) if on_helper_lang else None)
             for code in LANGS
         ), width=110)
+
+        fix_card = self._card(i18n_ui("settings.hebrew_fix"), i18n_ui("settings.hebrew_fix_hint"))
+        self._chips(fix_card, (
+            (i18n_ui(f"fix.{code}"), hebrew_fix == code, lambda c=code: on_hebrew_fix(c) if on_hebrew_fix else None)
+            for code in ("auto", "words", "letters", "off")
+        ), width=120)
 
         look = self._card("תצוגה", "בהיר או כהה, גודל טקסט, ומיקוד בלי רעש.")
         self._chips(look, (

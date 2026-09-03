@@ -35,6 +35,22 @@ STRINGS: dict[str, dict[str, str]] = {
         "ru": "Язык подсказки",
         "ar": "لغة المساعدة",
     },
+    "settings.hebrew_fix": {
+        "he": "העברית הפוכה?",
+        "en": "Hebrew backwards?",
+        "ru": "Иврит наоборот?",
+        "ar": "العبرية بالعكس؟",
+    },
+    "settings.hebrew_fix_hint": {
+        "he": "אם המילים הפוכות במחשב באנגלית או רוסית — לחצו «תקן עברית». אם האותיות עצמן הפוכות — «תקן אותיות».",
+        "en": "If Hebrew words are reversed on an English or Russian PC, tap Fix Hebrew. If the letters themselves are reversed, tap Fix letters.",
+        "ru": "Если слова на иврите наоборот — нажмите «Исправить иврит». Если перевёрнуты буквы — «Исправить буквы».",
+        "ar": "إذا الكلمات العبرية معكوسة على جهاز إنجليزي أو روسي — اضغط «أصلح العبرية». إذا الحروف نفسها معكوسة — «أصلح الحروف».",
+    },
+    "fix.auto": {"he": "אוטומטי", "en": "Auto", "ru": "Авто", "ar": "تلقائي"},
+    "fix.words": {"he": "תקן עברית", "en": "Fix Hebrew", "ru": "Исправить иврит", "ar": "أصلح العبرية"},
+    "fix.letters": {"he": "תקן אותיות", "en": "Fix letters", "ru": "Исправить буквы", "ar": "أصلح الحروف"},
+    "fix.off": {"he": "כבוי", "en": "Off", "ru": "Выкл", "ar": "إيقاف"},
     "settings.language_hint": {
         "he": "התפריטים והתקלות בשפה הזו. השאלות נשארות בעברית.",
         "en": "Menus and errors use this language. Questions stay in Hebrew.",
