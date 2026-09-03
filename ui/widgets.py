@@ -287,9 +287,8 @@ class OptionTile(tk.Frame):
         super().__init__(
             master, bg=self._fg, cursor="hand2",
             highlightthickness=1, highlightbackground=self._border,
-            highlightcolor=self._accent, height=height,
+            highlightcolor=self._accent,
         )
-        self.pack_propagate(False)
         self.badge = tk.Label(
             self, text=rtl(letter), width=3,
             bg=self._accent, fg=COLORS["text_on_primary"],
@@ -299,9 +298,17 @@ class OptionTile(tk.Frame):
         self.label = tk.Label(
             self, text=rtl(text), bg=self._fg, fg=self._text_color,
             font=(ADHD_CONFIG["font_family"], font_size(17), "bold"),
-            anchor="e", justify="right", padx=14, wraplength=680,
+            anchor="e", justify="right", padx=14, pady=10, wraplength=680,
         )
         self.label.pack(side="right", fill="both", expand=True)
+        self.update_idletasks()
+        try:
+            need = max(height, int(self.label.winfo_reqheight()) + 8)
+            self.configure(height=need)
+            self.pack_propagate(False)
+        except tk.TclError:
+            self.configure(height=height)
+            self.pack_propagate(False)
         for widget in (self, self.badge, self.label):
             widget.bind("<Button-1>", self._click)
             widget.bind("<Enter>", self._enter)

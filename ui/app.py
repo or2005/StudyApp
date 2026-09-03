@@ -45,11 +45,12 @@ from core.general_exam import (
 )
 from core.loader import load_subject
 from core.meimad_exam import (
-    PER_SECTION,
-    SECTION_SECONDS,
     SECTIONS,
     build_meimad_exam,
     can_take_meimad,
+    describe_sitting,
+    sitting_minutes,
+    sitting_size,
 )
 from core.session_review import session_weak_topics
 from core.session_state import SessionStateManager
@@ -1253,12 +1254,10 @@ class StudyApp(ctk.CTk):
         card.pack(fill="x", pady=(0, 12))
         kicker(inner, "מימ״ד", bg=COLORS["card_bg"]).pack(anchor="e")
         heading(inner, "ישיבת מימ״ד מלאה", 18).pack(anchor="e", pady=(2, 0))
-        minutes = (SECTION_SECONDS * len(SECTIONS)) // 60
         fast_label(
             inner,
-            f"שלושה פרקים ברצף: עברית, אנגלית, חשבון. "
-            f"{PER_SECTION} שאלות לכל פרק, {SECTION_SECONDS // 60} דקות לפרק, {minutes} דקות סה״כ. "
-            f"כשנגמר הזמן לפרק, עוברים אוטומטית לבא.",
+            f"ישיבה בסגנון מאל״ו: {describe_sitting()}. "
+            f"{sitting_minutes()} דקות סה״כ. כשנגמר הזמן לפרק, עוברים אוטומטית לבא.",
             size=13, muted=True, bg=COLORS["card_bg"], wrap=780,
         ).pack(anchor="e", pady=(4, 6))
         if last.get("percent") is not None:
@@ -1287,7 +1286,7 @@ class StudyApp(ctk.CTk):
         page_header(
             self.content,
             "מבחן מימ״ד",
-            "שלושה פרקים ברצף, שעון לכל פרק. הציון בסוף, לפי פרקים.",
+            "ישיבה מלאה בסגנון מאל״ו: פרק מילולי, פרק אנגלית ופרק כמותי. שעון לכל פרק, הציון בסוף.",
         )
 
         for key, name, count, seconds in SECTIONS:
@@ -1320,15 +1319,15 @@ class StudyApp(ctk.CTk):
             return
         if not dialogs.confirm(
             "ישיבת מימ״ד",
-            f"שלושה פרקים: עברית, אנגלית, חשבון.\n"
-            f"{PER_SECTION} שאלות ו־{SECTION_SECONDS // 60} דקות לכל פרק.\n"
+            f"ישיבת מימ״ד מלאה:\n{describe_sitting()}\n"
+            f"{sitting_minutes()} דקות ברצף.\n"
             f"כשנגמר הזמן לפרק, עוברים אוטומטית הלאה.\n"
             f"בלי הסבר באמצע. הציון לפי פרקים בסוף.\n\nלהתחיל עכשיו?",
         ):
             return
         built = build_meimad_exam(load_subject)
         questions = built.get("questions") or []
-        if len(questions) < PER_SECTION * 2:
+        if len(questions) < sitting_size() - 8:
             dialogs.error("שגיאה", "אין מספיק שאלות לבנות ישיבה. פתחו מקצוע ותרגלו קודם.")
             return
         self.current_subject = "hebrew"
@@ -1861,9 +1860,14 @@ class StudyApp(ctk.CTk):
         if is_coming_soon(subject):
             dialogs.info("בהכנה", f"{subject_label(subject)} עדיין בהכנה.")
             return
-        if mode in {"read", "lessons", "guided"}:
+        if mode in {"read", "lessons"}:
             self._show_lessons(subject)
             return
+        if mode == "guided" and not topic and not topics:
+            self._show_lessons(subject)
+            return
+        if mode == "guided" and topic:
+            topic_only = True
         if mode == "mistakes":
             self._start_mistake_drill(subject)
             return
@@ -1985,7 +1989,7 @@ class StudyApp(ctk.CTk):
                     "correct_answer": item.get("correct_answer"),
                     "explanation": item.get("explanation"),
                     "difficulty": "חזרה",
-                    "hint": "כבר טעית כאן פעם. קראו לאט.",
+                    "hint": "",
                 }
             )
         self.current_subject = subject or subject_key(questions[0].get("subject") or "hebrew")
@@ -2011,7 +2015,7 @@ class StudyApp(ctk.CTk):
                     "correct_answer": item.get("correct_answer"),
                     "explanation": item.get("explanation"),
                     "difficulty": "חזרה",
-                    "hint": "כבר טעית כאן. קראו לאט ובדקו מה נשאל.",
+                    "hint": "",
                 }
             )
         first_subj = subject_key(questions[0].get("subject") or self.current_subject or "hebrew")
@@ -2045,15 +2049,18 @@ class StudyApp(ctk.CTk):
         ).pack(anchor="e", pady=(0, 8))
         listing = tk.Frame(self.content, bg=COLORS["bg"])
         listing.pack(fill="both", expand=True)
-        display = list(lessons)
-        random.shuffle(display)
-        undone = [item for item in display if not self.storage.is_lesson_complete(str(item.get("id")))]
-        if undone:
-            featured = undone[0]
-            display = [featured] + [item for item in display if item is not featured]
+        weak = set(self.adaptive_engine.weak_topics(subject))
+
+        def _lesson_rank(item):
+            done = 1 if self.storage.is_lesson_complete(str(item.get("id"))) else 0
+            topic_name = str(item.get("topic") or "")
+            weak_hit = 0 if topic_name in weak else 1
+            return (done, weak_hit, random.random())
+
+        display = sorted(lessons, key=_lesson_rank)
         body(
             self.content,
-            "בכל כניסה הסדר משתנה, כדי שלא תישארו תמיד על אותו שיעור ראשון. תרגול על שיעור שולף שאלות אחרות מהמאגר.",
+            "קודם שיעורים שטרם סיימתם, ואחר כך נושאים שבהם טעיתם. תרגול על שיעור הוא קצר ורק על אותו נושא.",
             muted=True,
         ).pack(anchor="e", pady=(0, 8))
         for lesson in display:
@@ -2095,7 +2102,9 @@ class StudyApp(ctk.CTk):
             on_back=lambda: self._show_lessons(subject),
             on_prev=(lambda: self._open_lesson(subject, prev_id)) if prev_id else None,
             on_next=(lambda: self._open_lesson(subject, next_id)) if next_id else None,
-            on_practice=lambda: self._start_mode(subject, "practice", topic=lesson.get("topic")),
+            on_practice=lambda: self._start_mode(
+                subject, "guided", topic=lesson.get("topic"), topic_only=True,
+            ),
             speaker=self.speaker,
         ).pack(fill="both", expand=True)
 
@@ -2124,7 +2133,8 @@ class StudyApp(ctk.CTk):
         if self.current_mode != "general" and self.current_subject:
             level_he = LEVEL_HE.get(self.adaptive_engine.level_of(self.current_subject), "מתחיל")
         mode_he = {
-            "practice": "תרגול", "compose": "יצור", "review": "חזרה", "mock": "מבחן דמה",
+            "practice": "תרגול", "guided": "שיעור ותרגול", "compose": "יצור", "review": "חזרה",
+            "mock": "מבחן דמה",
             "final": "מבחן אמיתי", "timed": "מבחן", "general": "מבחן כללי",
             "meimad": "מימ״ד",
         }.get(self.current_mode, "תרגול")

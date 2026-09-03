@@ -196,6 +196,13 @@ class ResultsScreen(Page):
         tk.Label(inner, text=rtl(f"נכון: {ans.get('correct_answer', '')}"), bg=COLORS["card_bg"],
                  fg=COLORS["success"], font=(ADHD_CONFIG["font_family"], font_size(14), "bold"),
                  anchor="e", justify="right", wraplength=780).pack(fill="x")
+        from core.teach import display_explanation
+
+        expl = display_explanation(ans, ans.get("subject") or "")
+        if expl:
+            fast_label(inner, expl, size=13, muted=True, bg=COLORS["card_bg"], wrap=780).pack(
+                fill="x", pady=(4, 0)
+            )
         if on_fix_questions:
             ModernButton(
                 inner, text=rtl("תקן עכשיו"), width=150,
@@ -218,6 +225,10 @@ class ResultsScreen(Page):
         tk.Label(inner, text=rtl(f"נכון: {ans.get('correct_answer', '')}"), bg=COLORS["card_bg"],
                  fg=COLORS["success"], font=(ADHD_CONFIG["font_family"], font_size(14), "bold"),
                  anchor="e", justify="right", wraplength=780).pack(fill="x")
-        if ans.get("explanation"):
-            fast_label(inner, ans["explanation"], size=13, muted=True,
-                       bg=COLORS["card_bg"], wrap=780).pack(fill="x", pady=(3, 0))
+        from core.teach import display_explanation
+
+        expl = display_explanation(ans, ans.get("subject") or "")
+        if expl:
+            fast_label(inner, expl, size=13, muted=True, bg=COLORS["card_bg"], wrap=780).pack(
+                fill="x", pady=(3, 0)
+            )

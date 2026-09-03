@@ -1,5 +1,21 @@
 # Changelog
 
+## [4.7.0] - 2026-09-03
+
+### Fixed
+- English and math no longer reverse on English Windows (punctuation and formulas stay readable)
+- Practice questions explain what is being asked, not only «pick an answer»
+- Short stems like «נרדפת למהיר» and «הניגוד של כהה» are written as full questions
+- Fake options such as «כההון» and a lone letter are removed
+- Meimad reading passages are no longer cut off
+
+### Updated
+- Question bank: dummy options, vague stems («מה נכון?»), and duplicate math items cleaned up
+- Explanations and hints now teach the topic (rule + common mistake), not generic "read again"
+- After a lesson, practice is a short drill on that topic only
+- Lessons list unfinished and weak topics first
+- Results, mistakes, and "fix now" cards show the full teaching explanation
+
 ## [4.6.1] - 2026-09-03
 
 ### Fixed

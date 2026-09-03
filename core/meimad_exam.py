@@ -1,52 +1,107 @@
-"""מושב מימ״ד מלא: שלושה פרקים, שעון לכל פרק, ציון לפי פרק.
+"""מושב מימ״ד בסגנון מאל״ו: שלושה פרקים ארוכים, שעון לכל פרק.
 
-זה לא המבחן הכללי של כל שמונת המקצועות, כאן רק עברית, אנגלית וחשבון,
-כמו ישיבה אמיתית במאל״ו.
+עברית מילולית, אנגלית והשלמות, וחשבון כמותי. לא 10–12 שאלות קצרות.
+השאלות מקוריות, לא הועתקו משאלון רשמי.
 """
 from __future__ import annotations
 
 import random
 from typing import Any, Callable
 
+from core.adaptive_engine import normalize_difficulty, pick_by_mix
 from core.config import MEIMAD_SUBJECTS, subject_label
 
-PER_SECTION = 10
-SECTION_SECONDS = 12 * 60  # 12 דקות לפרק, ניהול זמן, לא רק ידע
+# ישיבה קרובה למאל״ו: פרק מילולי, פרק אנגלית, פרק כמותי.
 SECTIONS: list[tuple[str, str, int, int]] = [
-    ("hebrew", "עברית", PER_SECTION, SECTION_SECONDS),
-    ("english", "אנגלית", PER_SECTION, SECTION_SECONDS),
-    ("math", "חשבון", PER_SECTION, SECTION_SECONDS),
+    ("hebrew", "עברית, חשיבה מילולית", 20, 20 * 60),
+    ("english", "אנגלית", 22, 20 * 60),
+    ("math", "חשבון, חשיבה כמותית", 20, 20 * 60),
 ]
+MEIMAD_MIX = {"Easy": 0.22, "Medium": 0.53, "Hard": 0.25}
 
 
-def _pick(pool: list[dict], count: int, rng: random.Random) -> list[dict]:
-    if not pool:
+def section_count(key: str) -> int:
+    for item in SECTIONS:
+        if item[0] == key:
+            return item[2]
+    return 20
+
+
+def sitting_size() -> int:
+    return sum(row[2] for row in SECTIONS)
+
+
+def sitting_minutes() -> int:
+    return sum(row[3] for row in SECTIONS) // 60
+
+
+def describe_sitting() -> str:
+    parts = [f"{name}: {count} שאלות, {seconds // 60} דקות" for _, name, count, seconds in SECTIONS]
+    return " · ".join(parts)
+
+
+def _score(question: dict, subject: str) -> float:
+    tags = [str(item) for item in (question.get("tags") or [])]
+    topic = str(question.get("topic") or "")
+    blob = f"{topic} {' '.join(tags)} {question.get('category') or ''}"
+    value = 0.0
+    if question.get("kind") == "passage" or question.get("passage"):
+        value += 45
+    if question.get("level") in {"3units", "4units"}:
+        value += 18
+    if any(mark in blob.lower() for mark in ("meimad", "מימ", "bagrut", "בגרות")):
+        value += 16
+    if subject == "math" and any(
+        word in topic for word in ("אחוז", "יחס", "ממוצע", "בעי", "סדרה", "פרופור", "דרך", "מימ")
+    ):
+        value += 12
+    if subject == "hebrew" and any(
+        word in topic for word in ("נרדפ", "הפך", "הבנת", "אנלוג", "השלמ", "מימ", "לשון בהקשר")
+    ):
+        value += 12
+    if subject == "english" and any(
+        word in topic.lower() for word in ("unseen", "perfect", "grammar", "meimad", "module", "restat")
+    ):
+        value += 12
+    if normalize_difficulty(question.get("difficulty")) == "Easy" and "כתיב" in topic:
+        value -= 8
+    return value
+
+
+def _pick(pool: list[dict], count: int, rng: random.Random, subject: str) -> list[dict]:
+    if not pool or count <= 0:
         return []
-    passages = [q for q in pool if q.get("kind") == "passage" or q.get("passage")]
-    rest = [q for q in pool if q not in passages]
+    fresh = [q for q in pool if q.get("kind") != "trick"]
     picked: list[dict] = []
 
-    # אם יש קטע קריאה, לוקחים בלוק שלם מאותו passage_id, עד 4 שאלות.
+    passages = [q for q in fresh if q.get("kind") == "passage" or q.get("passage")]
     by_id: dict[str, list[dict]] = {}
     for item in passages:
         by_id.setdefault(str(item.get("passage_id") or item.get("id")), []).append(item)
     groups = list(by_id.values())
     rng.shuffle(groups)
-    for group in groups:
-        if len(picked) >= count:
-            break
-        room = count - len(picked)
-        if len(group) <= room:
-            picked.extend(group)
-        elif room >= 3:
-            picked.extend(group[:room])
+    # פרק מילולי/אנגלית אמיתי כולל קטע קריאה עם כמה שאלות עליו.
+    if subject in {"hebrew", "english"} and groups:
+        group = max(groups, key=len)
+        take = min(len(group), 5 if subject == "english" else 4, count)
+        if take >= 3:
+            picked.extend(group[:take])
 
-    leftover = [q for q in rest if q not in picked]
-    rng.shuffle(leftover)
-    for item in leftover:
-        if len(picked) >= count:
-            break
-        picked.append(item)
+    rest = [q for q in fresh if q not in picked]
+    need = count - len(picked)
+    if need > 0:
+        more = pick_by_mix(
+            rest,
+            MEIMAD_MIX,
+            need,
+            rng=rng,
+            scorer=lambda q: _score(q, subject) + rng.random() * 4,
+        )
+        picked.extend(more)
+    if len(picked) < count:
+        leftover = [q for q in rest if q not in picked]
+        rng.shuffle(leftover)
+        picked.extend(leftover[: count - len(picked)])
     return picked[:count]
 
 
@@ -58,7 +113,7 @@ def build_meimad_exam(load_subject: Callable[[str], dict | None], seed: int | No
     for key, name, count, seconds in SECTIONS:
         data = load_subject(key) or {}
         pool = [q for q in (data.get("questions") or []) if q.get("kind") != "trick"]
-        chunk = _pick(pool, count, rng)
+        chunk = _pick(pool, count, rng, key)
         if len(chunk) < count:
             extra = [q for q in pool if q not in chunk]
             rng.shuffle(extra)

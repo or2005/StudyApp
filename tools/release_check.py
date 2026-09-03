@@ -1,18 +1,21 @@
+"""בדיקת סביבה לפני שחרור: תלויות + בדיקות יחידה."""
+from __future__ import annotations
+
 import os
 import subprocess
 import sys
 
-ROOT = os.path.abspath(os.path.dirname(__file__))
+ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 
-def run_command(command):
+def run_command(command: str) -> None:
     print(f"\n>> {command}")
     result = subprocess.run(command, cwd=ROOT, shell=True)
     if result.returncode != 0:
         raise SystemExit(result.returncode)
 
 
-def main():
+def main() -> None:
     try:
         import customtkinter  # noqa: F401
     except ModuleNotFoundError as exc:

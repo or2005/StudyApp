@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 from core.config import subject_label
-from core.theory_library import DEPTH, EXTRA_LESSONS, VOICE
+from core.theory_library import EXTRA_LESSONS, VOICE
 
 MARKER = "למה זה חשוב"
 
@@ -41,7 +41,9 @@ def expand_one(subject: str, lesson: dict) -> str:
     if MARKER in raw:
         return raw
     parts = [raw] if raw else [title]
-    depth = _match_depth(subject, f"{title} {topic} {raw[:180]}")
+    from core.teach import match_depth
+
+    depth = match_depth(subject, f"{title} {topic} {raw[:800]}")
     if depth and depth not in raw:
         parts.extend(["", "הרחבה", depth])
     voice = VOICE.get(subject) or VOICE.get("_default") or {}
@@ -73,21 +75,9 @@ def expand_one(subject: str, lesson: dict) -> str:
 
 
 def _match_depth(subject: str, blob: str) -> str:
-    text = blob.lower()
-    best = ""
-    best_hits = 0
-    for keywords, essay in DEPTH.get(subject) or []:
-        hits = sum(1 for word in keywords if word and word in blob)
-        if hits > best_hits:
-            best_hits = hits
-            best = essay
-        elif hits == 0:
-            # also allow lowercase latin tokens
-            hits = sum(1 for word in keywords if word.lower() in text)
-            if hits > best_hits:
-                best_hits = hits
-                best = essay
-    return best if best_hits else ""
+    from core.teach import match_depth
+
+    return match_depth(subject, blob)
 
 
 def _default_how() -> str:

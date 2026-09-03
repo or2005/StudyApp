@@ -64,6 +64,10 @@ class MistakesScreen(Page):
             fg=COLORS["success"], font=(ADHD_CONFIG["font_family"], font_size(14), "bold"),
             anchor="e", justify="right", wraplength=780,
         ).pack(fill="x")
-        if item.get("explanation"):
-            fast_label(inner, item["explanation"], size=13, muted=True,
-                       bg=COLORS["card_bg"], wrap=780).pack(fill="x", pady=(4, 0))
+        from core.teach import display_explanation
+
+        expl = display_explanation(item, item.get("subject") or "")
+        if expl:
+            fast_label(inner, expl, size=13, muted=True, bg=COLORS["card_bg"], wrap=780).pack(
+                fill="x", pady=(4, 0)
+            )

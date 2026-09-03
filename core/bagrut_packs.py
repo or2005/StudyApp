@@ -195,7 +195,7 @@ ENGLISH = [
             ("I ___ visit my aunt tomorrow. (plan)", "am going to", ["goed", "going visit", "wills"], "going to = plan.", "Easy"),
             ("When he arrives, he ___ us.", "will call", ["calls will", "called", "calling"], "when + present, will.", "Medium"),
             ("If I am free, I ___ you.", "will help", ["helped", "helps yesterday", "helping"], "first conditional.", "Medium"),
-            ("Choose correct", "If you heat ice, it melts.", ["If you will heat ice, it will melts.", "If you heated ice tomorrow always", "If heat ice."], "zero/first fact.", "Hard"),
+            ("בחרו את המשפט התקין על עובדה כללית", "If you heat ice, it melts.", ["If you will heat ice, it will melts.", "If you heated ice tomorrow always", "If heat ice."], "עובדה: present + present.", "Hard"),
             ("Tomorrow I ___ 16.", "will be", ["am be", "was", "being"], "will be.", "Easy"),
         ],
     ),

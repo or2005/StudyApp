@@ -167,7 +167,7 @@ def make_compose(
         "question": prompt,
         "correct_answer": answer,
         "accepted": accepted or [],
-        "explanation": polish_explanation(answer, explanation, topic),
+        "explanation": polish_explanation(answer, explanation, topic, subject),
         "difficulty": difficulty,
         "kind": "compose",
         "compose": True,

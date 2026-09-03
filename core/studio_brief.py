@@ -17,11 +17,16 @@ SKIP_DIRS = {
     "__pycache__",
     ".mypy_cache",
     ".pytest_cache",
+    ".ruff_cache",
+    ".qpanda",
     "node_modules",
     "_qa_shots",
+    "_qa_play",
     ".cursor",
+    "main.build",
+    "main.dist",
 }
-SKIP_TOP = {"dist", "build"}
+SKIP_TOP = {"dist", "build", "main.build", "main.dist"}
 
 
 def bank_census() -> list[dict]:

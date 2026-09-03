@@ -23,13 +23,21 @@ def _q(question, correct, wrongs, why, diff="Medium"):
             seen.add(s)
         if len(clean) >= 3:
             break
-    pad = 1
+    from core.quiz import suggest_distractors
+
+    for extra in suggest_distractors(str(correct)):
+        if extra not in seen:
+            clean.append(extra)
+            seen.add(extra)
+        if len(clean) >= 3:
+            break
+    pad = max(abs(int(str(correct))) if str(correct).lstrip("-").isdigit() else 3, 3)
     while len(clean) < 3:
         extra = str(pad)
         if extra not in seen:
             clean.append(extra)
             seen.add(extra)
-        pad += 1
+        pad += 7
     return (
         question,
         str(correct),
@@ -196,10 +204,10 @@ def _eng_block() -> list:
         ing = v + "ing"
         if v.endswith("e") and v not in {"be", "see"}:
             ing = v[:-1] + "ing"
-        easy.append(_q(f"She ___ every day. ({v})", s, [v, ed, ing], _why(f"Present simple he/she/it → {s}."), "Easy"))
-        easy.append(_q(f"They ___ yesterday. ({v})", ed, [v, s, ing], _why(f"yesterday → past simple {ed}."), "Easy"))
-        mid.append(_q(f"He is ___ now. ({v})", ing, [v, s, ed], _why(f"now → be + {ing}."), "Medium"))
-        hard.append(_q(f"She has already ___ . ({v})", ed, [v, s, ing], _why(f"have/has + V3. לרגילים V3={ed}."), "Hard"))
+        easy.append(_q(f"השלימו: She ___ every day. ({v})", s, [v, ed, ing], _why(f"Present simple he/she/it → {s}."), "Easy"))
+        easy.append(_q(f"השלימו: They ___ yesterday. ({v})", ed, [v, s, ing], _why(f"yesterday → past simple {ed}."), "Easy"))
+        mid.append(_q(f"השלימו: He is ___ now. ({v})", ing, [v, s, ed], _why(f"now → be + {ing}."), "Medium"))
+        hard.append(_q(f"השלימו: She has already ___ . ({v})", ed, [v, s, ing], _why(f"have/has + V3. לרגילים V3={ed}."), "Hard"))
     theory_e = T("Present and past", ["every day → V/Vs.", "yesterday → V-ed."], "She cooks; they cooked.")
     theory_m = T("Continuous", ["now / look! → am/is/are + V-ing."], "He is walking.")
     theory_h = T("Present perfect", ["already / yet / since / for → have + V3."], "She has already cooked.")
@@ -223,12 +231,14 @@ def _heb_block() -> list:
     ]
     easy = []
     seen = set()
+    pool = [word for pair in pairs for word in pair]
     for a, b in pairs:
+        others = [word for word in pool if word not in {a, b}]
         if a not in seen:
-            easy.append(_q(f"הניגוד של «{a}»", b, [a, a + "ון", "מספר"], _why(f"{a} ↔ {b}."), "Easy"))
+            easy.append(_q(f"איזו מילה הפוכה במשמעות ל«{a}»?", b, [a, others[0], others[1]], _why(f"{a} ↔ {b}."), "Easy"))
             seen.add(a)
         if b not in seen:
-            easy.append(_q(f"הניגוד של «{b}»", a, [b, b + "ון", "צבע"], _why(f"{b} ↔ {a}."), "Easy"))
+            easy.append(_q(f"איזו מילה הפוכה במשמעות ל«{b}»?", a, [b, others[2], others[3]], _why(f"{b} ↔ {a}."), "Easy"))
             seen.add(b)
     roots = [
         ("כ.ת.ב", "כתב", "כותב", "יכתוב"),
@@ -251,9 +261,9 @@ def _heb_block() -> list:
     for root, past, pres, fut in roots:
         if past == pres or past == fut or pres == fut:
             continue
-        mid.append(_q(f"שורש {root} בעבר (יחיד)", past, [pres, fut, root], _why(f"עבר: {past}."), "Medium"))
-        mid.append(_q(f"שורש {root} בהווה (יחיד)", pres, [past, fut, root], _why(f"הווה: {pres}."), "Medium"))
-        mid.append(_q(f"שורש {root} בעתיד (יחיד)", fut, [past, pres, root], _why(f"עתיד: {fut}."), "Hard"))
+        mid.append(_q(f"מה צורת העבר (יחיד) של השורש {root}?", past, [pres, fut, root], _why(f"עבר: {past}."), "Medium"))
+        mid.append(_q(f"מה צורת ההווה (יחיד) של השורש {root}?", pres, [past, fut, root], _why(f"הווה: {pres}."), "Medium"))
+        mid.append(_q(f"מה צורת העתיד (יחיד) של השורש {root}?", fut, [past, pres, root], _why(f"עתיד: {fut}."), "Hard"))
     theory_e = T("ניגודים", ["ניגוד עוזר להבין מילה.", "לא בוחרים מילה שנשמעת דומה."], "חם ↔ קר.")
     theory_m = T("זמנים ושורש", ["עבר / הווה / עתיד לפי בניין קל.", "אל תבלבלו כותב עם כתב."], "כתב, כותב, יכתוב.")
     return [

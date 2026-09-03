@@ -1,7 +1,7 @@
 import time
 import tkinter as tk
 
-from core.config import ADHD_CONFIG, COLORS, rtl
+from core.config import ADHD_CONFIG, COLORS, rtl, rtl_paragraph
 from core.theme import subject_accent
 from ui.fast import fast_label
 from ui.widgets import GhostButton, ModernButton, OptionTile, ProgressBar, body, font_size, heading, kicker, make_card, number_pill, themed_entry, Page
@@ -136,8 +136,10 @@ class PracticeScreen(Page):
         if self.session.can_skip() and self.session.mode not in {"final", "general"}:
             GhostButton(bar, text=rtl("דלג (S)"), width=110, command=self._skip).pack(side="left", padx=4)
         if self.speaker is not None and self.speaker.enabled:
+            from core.teach import clarify_stem as _say_stem
+
             GhostButton(bar, text=rtl("🔊 הקראה"), width=120,
-                        command=lambda: self.speaker.say(q.get("question", ""))).pack(side="left", padx=4)
+                        command=lambda item=q: self.speaker.say(_say_stem(item))).pack(side="left", padx=4)
         from core.i18n import get_lang, ui as i18n_ui
 
         if get_lang() != "he":
@@ -152,7 +154,9 @@ class PracticeScreen(Page):
             diff = {"Easy": "קל", "Medium": "בינוני", "Hard": "קשה"}.get(
                 str(q.get("difficulty") or ""), str(q.get("difficulty") or "")
             )
-            meta = q.get("topic", "תרגול")
+            from core.teach import topic_label
+
+            meta = topic_label(q.get("topic") or "תרגול", q.get("subject") or self.subject_key or "")
             if self.level_he:
                 meta = f"{meta}  ·  רמה {self.level_he}"
             if diff:
@@ -184,7 +188,7 @@ class PracticeScreen(Page):
             fast_label(box, "קטע קריאה. קראו קודם, אחר כך ענו", size=12, muted=True,
                        bg=COLORS["card_bg"]).pack(anchor="e", padx=14, pady=(10, 0))
             text = tk.Text(
-                box, wrap="word", height=min(12, 4 + passage.count("\n")),
+                box, wrap="word", height=max(6, min(14, 3 + passage.count("\n") + max(1, len(passage) // 78))),
                 font=(ADHD_CONFIG["font_family"], font_size(14)),
                 bg=COLORS["card_bg"], fg=COLORS["text_main"],
                 relief="flat", highlightthickness=0, padx=10, pady=8,
@@ -193,7 +197,7 @@ class PracticeScreen(Page):
                 selectforeground=COLORS["text_on_primary"],
             )
             text.pack(fill="x", padx=10, pady=(2, 12))
-            text.insert("1.0", rtl(passage))
+            text.insert("1.0", rtl_paragraph(passage))
             text.tag_configure("rtl", justify="right")
             text.tag_add("rtl", "1.0", "end")
             text.configure(state="disabled")
@@ -201,14 +205,46 @@ class PracticeScreen(Page):
         compose = self._is_compose(q)
         qbox, qinner = make_card(self, pady=16)
         qbox.pack(fill="x", pady=(0, 14))
+        from core.teach import clarify_stem, task_prompt
+
+        stem = clarify_stem(q)
         if compose:
             fast_label(
                 qinner, "מצב יצור: כותבים את התשובה, לא בוחרים מתוך רשימה.",
                 size=13, muted=True, bg=COLORS["card_bg"],
             ).pack(anchor="e", pady=(0, 8))
-        heading(qinner, q.get("question", ""), 22).pack(anchor="e")
+        if not self.exam_mode:
+            from core.learn_format import exhibit_label, exhibit_text, kicker_for
+
+            kick = kicker_for(q)
+            if kick:
+                kicker(qinner, kick, bg=COLORS["card_bg"]).pack(anchor="e", pady=(0, 4))
+            extra = exhibit_text(q)
+            if extra and extra != passage:
+                label = exhibit_label(q)
+                if label:
+                    fast_label(
+                        qinner, label, size=12, muted=True, bg=COLORS["card_bg"],
+                    ).pack(anchor="e")
+                body(qinner, extra, size=15, wrap=720).pack(anchor="e", pady=(0, 8))
+            task = task_prompt(q)
+            if task:
+                tk.Label(
+                    qinner,
+                    text=rtl(f"מה השאלה מבקשת: {task}"),
+                    bg=COLORS["card_bg"],
+                    fg=COLORS["primary"],
+                    font=(ADHD_CONFIG["font_family"], font_size(15), "bold"),
+                    anchor="e",
+                    justify="right",
+                    wraplength=720,
+                ).pack(fill="x", pady=(0, 10))
+        heading(qinner, stem, 22).pack(anchor="e")
         if self.speaker is not None and self.speaker.enabled:
-            self.speaker.say(q.get("question", ""))
+            spoken = stem
+            if not self.exam_mode:
+                spoken = f"{task_prompt(q)} {stem}".strip()
+            self.speaker.say(spoken)
 
         self.opts = tk.Frame(self, bg=COLORS["bg"])
         self.opts.pack(fill="x")
@@ -245,9 +281,12 @@ class PracticeScreen(Page):
                 hints, hint_line,
                 size=12, muted=True, bg=COLORS["bg"],
             ).pack(side="right")
-            if q.get("hint"):
-                GhostButton(hints, text=rtl("רמז"), width=100,
-                            command=lambda: self._show_hint(q["hint"])).pack(side="left")
+            from core.teach import live_hint
+
+            GhostButton(
+                hints, text=rtl("רמז"), width=100,
+                command=lambda item=q: self._show_hint(live_hint(item, self.subject_key or "")),
+            ).pack(side="left")
             if self.on_report:
                 GhostButton(hints, text=rtl("משהו לא נכון כאן"), width=170,
                             command=lambda item=q: self._report(item)).pack(side="left", padx=4)
@@ -478,7 +517,7 @@ class PracticeScreen(Page):
             fast_label(
                 inner, f"כתבת: {typed}", size=13, muted=True, bg=COLORS["card_bg"], wrap=720,
             ).pack(anchor="e", pady=(4, 0))
-        from core.quiz import polish_explanation
+        from core.teach import display_explanation, feedback_note
 
         opts = q.get("options") or []
         idx = q.get("answer")
@@ -489,10 +528,16 @@ class PracticeScreen(Page):
             fast_label(
                 inner, f"צריך היה לכתוב: {correct}", size=15, bg=COLORS["card_bg"], wrap=720,
             ).pack(anchor="e", pady=(6, 0))
-        explanation = polish_explanation(correct, q.get("explanation") or "", q.get("topic") or "")
+        explanation = display_explanation(q, self.subject_key or "")
         fast_label(
             inner, f"הסבר: {explanation}", size=14, bg=COLORS["card_bg"], wrap=720,
-        ).pack(anchor="e", pady=(6, 8))
+        ).pack(anchor="e", pady=(6, 4))
+        note = feedback_note(q, correct=bool(is_correct), subject=self.subject_key or "")
+        if note and note[:40] not in explanation:
+            label = "כלל קצר" if is_correct else "שימו לב"
+            fast_label(
+                inner, f"{label}: {note}", size=13, muted=True, bg=COLORS["card_bg"], wrap=720,
+            ).pack(anchor="e", pady=(0, 8))
         if self.speaker is not None and self.speaker.enabled:
             self.speaker.say(explanation)
         ModernButton(

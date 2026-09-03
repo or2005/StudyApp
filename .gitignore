@@ -2,6 +2,9 @@
 __pycache__/
 *.pyc
 .ruff_cache/
+.qpanda/
+.pytest_cache/
+.mypy_cache/
 main.build/
 main.dist/
 main.onefile-build/
@@ -9,9 +12,11 @@ nuitka-crash-report.xml
 data/user_profile.json
 data/user_stats.json
 *.tmp
-.qpanda/
 _qa_report.txt
 _qa_stress_report.txt
+_qa_play_report.txt
+_qa_release_report.txt
 _qa_shots/
+_qa_play/
 dist/
 build/

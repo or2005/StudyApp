@@ -23,8 +23,9 @@ class RtlTextTests(unittest.TestCase):
         self.assertIn("sara!", visual)
         self.assertEqual(rtltext.visual_line(visual), src)
 
-    def test_visual_keeps_hebrew_letters_inside_a_word(self):
-        self.assertEqual(rtltext.visual_line("אנגלית"), "אנגלית")
+    def test_hebrew_period_moves_with_the_word(self):
+        self.assertEqual(rtltext.visual_line("אתמול."), ".אתמול")
+        self.assertEqual(rtltext.visual_line(".אתמול"), "אתמול.")
 
     def test_apply_visual_has_no_bidi_isolates(self):
         src = "יש עדכון 4.5.2"
@@ -58,6 +59,45 @@ class RtlTextTests(unittest.TestCase):
         rtltext.set_mode("words")
         text = rtltext.apply("עדכן עכשיו")
         self.assertIn("עכשיו", rtltext.strip_marks(text).split()[0])
+
+    def test_english_keeps_question_mark(self):
+        src = "Could you help me, please?"
+        with patch("core.rtltext.resolved_mode", return_value="words"):
+            shown = rtltext.strip_marks(rtltext.apply(src))
+        self.assertTrue(shown.endswith("?"))
+        self.assertTrue(shown.startswith("Could"))
+        self.assertIn("\u202a", rtltext.apply(src))
+
+    def test_hebrew_windows_keeps_english_punctuation(self):
+        src = "Look! He is ___ help."
+        with patch("core.rtltext.resolved_mode", return_value="off"), patch(
+            "core.rtltext.windows_has_rtl_ui", return_value=True
+        ):
+            wrapped = rtltext.apply(src)
+        self.assertIn("\u202a", wrapped)
+        self.assertNotIn("\u202b", wrapped)
+        self.assertTrue(rtltext.strip_marks(wrapped).endswith("."))
+
+    def test_english_sentence_is_not_reversed(self):
+        src = "I have seen that film."
+        self.assertEqual(rtltext.visual_line(src), src)
+
+    def test_math_formula_is_not_reversed(self):
+        src = "x² − 5x + 6 = 0"
+        self.assertEqual(rtltext.visual_line(src), src)
+
+    def test_mixed_hebrew_keeps_english_chunk(self):
+        src = "השלימו: She ___ her homework."
+        visual = rtltext.visual_line(src)
+        self.assertIn("She ___ her homework.", visual)
+        self.assertNotIn("homework. her ___ She", visual)
+        self.assertEqual(rtltext.visual_line(visual), src)
+
+    def test_percent_line_keeps_number_readable(self):
+        src = "20% מ־150 הם"
+        visual = rtltext.visual_line(src)
+        self.assertIn("20%", visual)
+        self.assertEqual(rtltext.visual_line(visual), src)
 
 
 if __name__ == "__main__":

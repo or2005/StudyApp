@@ -520,7 +520,7 @@ ENGLISH = [
             _q("If I were you, I ___ apologize.", "would", ["will", "was", "do"], _why("Were + would."), "Hard"),
             _q("She will call if she ___ home.", "gets", ["will get", "got", "getting"], _why("No will in the if-clause in this pattern."), "Medium"),
             _q("If they had left earlier, they ___ the train.", "would have caught", ["will catch", "catch", "caught will"], _why("Third conditional: had + would have."), "Hard"),
-            _q("Choose correct", "If he studies, he will pass.", ["If he will study, he passes tomorrow as first.", "If he study, he passing.", "If he studies, he would passed yesterday."], _why("First: present + will."), "Medium"),
+            _q("בחרו את המשפט התקין באנגלית", "If he studies, he will pass.", ["If he will study, he passes tomorrow as first.", "If he study, he passing.", "If he studies, he would passed yesterday."], _why("First conditional: present + will."), "Medium"),
             _q("I ___ buy it if it were cheaper.", "would", ["will", "am", "do"], _why("Unreal present."), "Hard"),
             _q("If you mix blue and yellow, you ___ green.", "get", ["got will", "would getting", "are getted"], _why("Zero: general truth."), "Easy"),
             _q("Had I known, I ___ come.", "would have", ["will", "am", "do"], _why("Inverted third conditional."), "Hard"),

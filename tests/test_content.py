@@ -26,7 +26,10 @@ class ContentQualityTests(unittest.TestCase):
         for key, bank in self.banks.items():
             for q in bank["questions"]:
                 self.assertEqual(len(q["options"]), 4, q["id"])
-                self.assertNotIn("גרסה שגויה", " ".join(q["options"]))
+                joined = " ".join(q["options"])
+                self.assertNotIn("גרסה שגויה", joined)
+                self.assertNotIn("לא נכון (", joined)
+                self.assertNotIn("only wrong", joined.lower())
                 self.assertEqual(q["options"][q["answer"]], q["correct_answer"])
                 self.assertTrue(q.get("explanation"))
 
@@ -45,6 +48,13 @@ class ContentQualityTests(unittest.TestCase):
         bagrut_civ = [l for l in civ["lessons"] if "בגרות" in (l.get("category") or "")]
         self.assertGreaterEqual(len(bagrut_eng), 8)
         self.assertGreaterEqual(len(bagrut_civ), 8)
+
+    def test_stems_say_what_to_do(self):
+        banned = {"מה נכון?", "מה נכון", "איך כותבים נכון?", "choose correct"}
+        for key, bank in self.banks.items():
+            for q in bank["questions"]:
+                stem = " ".join(str(q.get("question") or "").split()).lower()
+                self.assertNotIn(stem, banned, f"{key} {q.get('id')}")
 
     def test_every_question_has_a_real_explanation(self):
         for key, bank in self.banks.items():

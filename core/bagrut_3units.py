@@ -308,7 +308,7 @@ ENGLISH = [
             _q("I don't have ___ milk.", "any", ["some in this negative", "many milk", "few milk"], "any in negative.", "Easy"),
             _q("This test is ___ than the last one.", "easier", ["more easy", "easiest than", "easyer"], "short adj + er.", "Easy"),
             _q("He ___ football yesterday.", "played", ["play", "playing now", "plays yesterday"], "past simple.", "Easy"),
-            _q("Choose correct", "I have lived here for three years.", ["I have lived here since three years.", "I has lived here for three years.", "I live here since three years always"], "for + duration.", "Hard"),
+            _q("בחרו את המשפט התקין: גרים כאן שלוש שנים", "I have lived here for three years.", ["I have lived here since three years.", "I has lived here for three years.", "I live here since three years always"], "for + משך זמן; since + נקודת התחלה.", "Hard"),
             _q("Wait ___ the station at 7.", "at", ["in", "on", "to the at"], "at a point / clock+place.", "Medium"),
         ],
     ),

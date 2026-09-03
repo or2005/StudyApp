@@ -11,7 +11,12 @@ _BIDI_MARKS: Final[str] = (
 )
 _SEG = re.compile(r"\S+|\s+")
 _RUNS = re.compile(r"[\u0590-\u05FF]+|[^\u0590-\u05FF]+")
+_HEB = re.compile(r"[\u0590-\u05FF]")
+_LTR = re.compile(r"[A-Za-z0-9]")
 _RTL_LANG: Final[frozenset[int]] = frozenset({0x01, 0x0D})  # Arabic, Hebrew
+_LRE = "\u202a"
+_RLE = "\u202b"
+_PDF = "\u202c"
 _DONE = "\u2060"  # word joiner: לא משנה כיוון, מסמן שכבר עובד
 _MODE = "auto"  # auto | words | letters | off
 
@@ -70,16 +75,108 @@ def needs_visual() -> bool:
     return resolved_mode() in {"words", "letters"}
 
 
+def _token_kind(tok: str) -> str:
+    if not tok or tok.isspace():
+        return "space"
+    if _HEB.search(tok):
+        return "rtl"
+    if _LTR.search(tok):
+        return "ltr"
+    return "neutral"
+
+
+def _run_dir(parts: list[str], start: int) -> str:
+    """כיוון ריצה: ניקוד וסימנים נצמדים לעברית או לאנגלית שלידם."""
+    idx = start
+    while idx < len(parts):
+        kind = _token_kind(parts[idx])
+        if kind in {"rtl", "ltr"}:
+            return kind
+        idx += 1
+    return "ltr"
+
+
+def _directional_runs(parts: list[str]) -> list[tuple[str, list[str]]]:
+    """מקבץ מילים לאותו כיוון. רווח בין עברית לאנגלית נשאר מפריד."""
+    runs: list[tuple[str, list[str]]] = []
+    idx = 0
+    n = len(parts)
+    while idx < n:
+        kind = _token_kind(parts[idx])
+        if kind == "space":
+            buf = [parts[idx]]
+            idx += 1
+            while idx < n and _token_kind(parts[idx]) == "space":
+                buf.append(parts[idx])
+                idx += 1
+            runs.append(("space", buf))
+            continue
+        direction = _run_dir(parts, idx)
+        buf = [parts[idx]]
+        idx += 1
+        while idx < n:
+            nxt = _token_kind(parts[idx])
+            if nxt in {direction, "neutral"}:
+                buf.append(parts[idx])
+                idx += 1
+                continue
+            if nxt != "space":
+                break
+            look = idx
+            while look < n and _token_kind(parts[look]) == "space":
+                look += 1
+            if look < n and _token_kind(parts[look]) in {direction, "neutral"}:
+                buf.extend(parts[idx:look])
+                idx = look
+                continue
+            break
+        runs.append((direction, buf))
+    return runs
+
+
+def _split_he_punct(tok: str) -> list[str]:
+    """מפריד נקודה/סימן שאלה ממילה עברית כדי שהפיסוק יישב בסוף הקריאה מימין."""
+    if _token_kind(tok) != "rtl":
+        return [tok]
+    lead = re.match(r"^([.!?]+)([\u0590-\u05FF].*)$", tok)
+    if lead:
+        return [lead.group(1), lead.group(2)]
+    trail = re.match(r"^([\u0590-\u05FF].*?)([.!?]+)$", tok)
+    if trail:
+        return [trail.group(1), trail.group(2)]
+    return [tok]
+
+
 def visual_line(text: str) -> str:
-    """הופך סדר מילים בלי להפוך אותיות."""
+    """סדר מילים לקריאה מימין ב-Windows לועזי, בלי להפוך אנגלית או נוסחה."""
     if not text or text.isspace():
         return text
-    return "".join(reversed(_SEG.findall(text)))
+    parts = _SEG.findall(text)
+    kinds = {_token_kind(part) for part in parts}
+    if "rtl" not in kinds:
+        return text
+    if "ltr" not in kinds:
+        expanded = []
+        for part in parts:
+            expanded.extend(_split_he_punct(part))
+        return "".join(reversed(expanded))
+    out: list[str] = []
+    for direction, tokens in reversed(_directional_runs(parts)):
+        if direction == "rtl":
+            inner: list[str] = []
+            for tok in tokens:
+                inner.extend(_split_he_punct(tok))
+            out.append("".join(reversed(inner)))
+        else:
+            out.append("".join(tokens))
+    return "".join(out)
 
 
 def visual_letters(text: str) -> str:
     """הופך גם אותיות עבריות, למחשב שמצייר משמאל בלי Uniscribe."""
     if not text:
+        return text
+    if not _HEB.search(text):
         return text
     runs = _RUNS.findall(text)
     out: list[str] = []
@@ -95,6 +192,22 @@ def _already(text: str) -> bool:
     return bool(text) and text[0] == _DONE
 
 
+def _wrap_latin_runs(text: str) -> str:
+    """שומר פיסוק וסדר באנגלית/מספרים גם כשהתווית עברית מימין לשמאל."""
+    if not text or not _LTR.search(text):
+        return text
+    if not _HEB.search(text):
+        return _LRE + text + _PDF
+    out: list[str] = []
+    for direction, tokens in _directional_runs(_SEG.findall(text)):
+        chunk = "".join(tokens)
+        if direction == "ltr":
+            out.append(_LRE + chunk + _PDF)
+        else:
+            out.append(chunk)
+    return "".join(out)
+
+
 def apply(text: str) -> str:
     if not text:
         return text
@@ -105,9 +218,32 @@ def apply(text: str) -> str:
     cleaned = strip_marks(text)
     mode = resolved_mode()
     if mode == "words":
-        return _DONE + visual_line(cleaned)
+        if not _HEB.search(cleaned):
+            return _DONE + _wrap_latin_runs(cleaned)
+        return _DONE + _wrap_latin_runs(visual_line(cleaned))
     if mode == "letters":
+        if not _HEB.search(cleaned):
+            return _DONE + _wrap_latin_runs(cleaned)
         return _DONE + visual_letters(cleaned)
     if windows_has_rtl_ui():
-        return "\u202b" + cleaned + "\u202c"
+        if not _HEB.search(cleaned):
+            return _wrap_latin_runs(cleaned)
+        if _LTR.search(cleaned):
+            return _RLE + _wrap_latin_runs(cleaned) + _PDF
+        return _RLE + cleaned + _PDF
     return cleaned
+
+
+def apply_paragraph(text: str) -> str:
+    """לקטע שמתלפף: בלי היפוך ויזואלי של כל הפסקה, ששובר נקודות באמצע שורה."""
+    if not text:
+        return text
+    if _already(text):
+        return text
+    cleaned = strip_marks(text)
+    if resolved_mode() not in {"words", "letters"}:
+        return apply(text)
+    if not _HEB.search(cleaned):
+        return _DONE + _wrap_latin_runs(cleaned)
+    body = _wrap_latin_runs(cleaned) if _LTR.search(cleaned) else cleaned
+    return _DONE + _RLE + body + _PDF

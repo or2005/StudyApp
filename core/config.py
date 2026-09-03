@@ -20,7 +20,7 @@ ICON_PATH: Final[str] = os.path.join(ASSETS_DIR, "icon.ico")
 ICON_PNG_PATH: Final[str] = os.path.join(ASSETS_DIR, "icon.png")
 APP_TITLE: Final[str] = "StudyApp"
 APP_NAME: Final[str] = "StudyApp"
-VERSION: Final[str] = "4.6.1"
+VERSION: Final[str] = "4.7.0"
 FONT_FAMILY: Final[str] = "Segoe UI"
 
 DEVELOPER_NAME: Final[str] = "אור דדשב"
@@ -59,6 +59,12 @@ def rtl(text: str) -> str:
     from core.rtltext import apply
 
     return apply(text)
+
+
+def rtl_paragraph(text: str) -> str:
+    from core.rtltext import apply_paragraph
+
+    return apply_paragraph(text)
 
 
 # ערכת הצבעים הפעילה. core/theme.py מחליף את התוכן במקום בעת מעבר בהיר/כהה.

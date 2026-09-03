@@ -49,7 +49,7 @@ class LessonScreen(Page):
                          command=on_next).pack(side="right", padx=5)
 
         ModernButton(
-            self, text=rtl("תרגול על השיעור הזה"), fg_color=COLORS["success"],
+            self, text=rtl("תרגול קצר על השיעור"), fg_color=COLORS["success"],
             hover_color=COLORS.get("success_hover") or COLORS["primary_hover"],
             text_color=COLORS.get("success_text") or "#FFFFFF",
             command=on_practice,

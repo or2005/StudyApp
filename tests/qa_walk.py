@@ -314,7 +314,7 @@ def main() -> int:
             bug(f"{name}: lesson screen did not open (clicked={clicked})")
         else:
             shot(app, f"lesson_{key}")
-            click_named(app, "תרגול על השיעור הזה")
+            click_named(app, "תרגול קצר על השיעור")
             pump(app, 100)
             n = answer_practice(app, max_q=4)
             note(f"{name} lesson-practice answered {n}")

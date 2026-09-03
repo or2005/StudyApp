@@ -41,7 +41,11 @@ def _math_percent() -> list:
     for n, p in cases:
         val = n * p // 100
         rest = n - val
-        wrong = [str(x) for x in (rest, p, n + val, n // max(1, p)) if str(x) != str(val)]
+        wrong = [
+            str(x)
+            for x in (rest, p, n + val, n // max(1, p), val + 1, max(0, val - 1), n, val * 2, n - p)
+            if str(x) != str(val)
+        ]
         rows.append(_q(
             f"{p}% מ־{n} הם",
             str(val),
@@ -85,17 +89,27 @@ def _math_ratio() -> list:
             continue
         unit = total // parts
         small, big = a * unit, b * unit
+        small_wrongs = [
+            str(x)
+            for x in (big, unit, total, total - small, a, b, small + 1, abs(small - 1), small * 2)
+            if str(x) != str(small)
+        ]
+        big_wrongs = [
+            str(x)
+            for x in (small, unit, total, total - big, a, b, big + 1, abs(big - 1), big * 2)
+            if str(x) != str(big)
+        ]
         rows.append(_q(
             f"יחס {a}:{b} מסכום {total}. החלק הקטן",
             str(small),
-            [str(big), str(unit), str(total - unit)],
+            small_wrongs[:3],
             _why(f"סך {parts} חלקים, כל חלק {unit}. הקטן {a}×{unit}={small}.", "קודם מוצאים את גודל החלק, אחר כך כופלים."),
             "Easy" if a == 1 and b <= 4 else "Medium",
         ))
         rows.append(_q(
             f"יחס {a}:{b} מסכום {total}. החלק הגדול",
             str(big),
-            [str(small), str(unit), str(total)],
+            big_wrongs[:3],
             _why(f"החלק הגדול {b}×{unit}={big}.", "בודקים: {small}+{big} חייב להיות {total}."),
             "Medium",
         ))
@@ -126,7 +140,7 @@ def _math_avg() -> list:
         rows.append(_q(
             f"ממוצע {a}, {b}, {c}",
             str(avg),
-            [str(s), str(c - a), str(avg + 2)],
+            [str(x) for x in (s, c - a, avg + 2, a, c, max(0, avg - 1)) if str(x) != str(avg)][:3],
             _why(f"סכום {s} חלקי 3 = {avg}.", "ממוצע הוא סכום חלקי מספר האיברים, לא האיבר האמצעי תמיד."),
             "Easy",
         ))
@@ -258,7 +272,7 @@ def _eng_tenses() -> list:
             "Easy",
         ))
         rows.append(_q(
-            f"Look! He is ___ {obj}.",
+            f"השלימו לפי מה שקורה עכשיו: Look! He is ___ {obj}.",
             ing,
             [base, s, ed],
             _why(f"Present continuous: be + V-ing → is {ing}.", "Look! מצביע על פעולה ברגע זה."),
@@ -435,7 +449,7 @@ def _heb_syntax() -> list:
         _q("ציווי של שב (יחיד)", "שב", ["ישב", "יושב", "ישבו"], _why("ציווי: שב.", "לא עבר."), "Medium"),
         _q("שלילה בעבר עם פועל", "לא + עבר", ["אל + עבר", "אין + עבר", "בלתי + עבר"], _why("לא כתב. אל לציווי.", "לא ואל אינם זהים."), "Medium"),
         _q("«את» לפני מושא מיודע", "מופיעה לרוב", ["אסורה תמיד", "רק באנגלית", "רק במספרים"], _why("קרא את הספר.", "מושא מיודע."), "Medium"),
-        _q("שם תואר ב«בית גדול»", "גדול", ["בית", "ה", "ב"], _why("גדול מתאר את הבית.", "תואר."), "Easy"),
+        _q("שם תואר ב«בית גדול»", "גדול", ["בית", "שם עצם", "אין תואר כאן"], _why("גדול מתאר את הבית.", "תואר."), "Easy"),
         _q("קמץ ומלא: כתיב מלא של קול", "קול", ["קולל", "כול", "קואל"], _why("כללי האקדמיה, לא מכפילים לחינם.", "כתיב מלא אינו ניחוש."), "Hard"),
         _q("דגש חזק בא אחרי", "אותיות בג״ד כפ״ת במצבים מסוימים / הכפלה", ["רק בסוף מילה תמיד", "רק במספרים", "רק באנגלית"], _why("דגש משפיע על הגיה.", "לא בכל מילה."), "Hard"),
     ]

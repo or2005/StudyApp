@@ -95,6 +95,38 @@ def enrich_bank(bank: dict) -> dict:
         bank = expand_lessons(key, bank)
     except Exception:
         pass
+    return _dedupe_questions(bank)
+
+
+def _question_rank(question: dict) -> tuple:
+    tags = question.get("tags") or []
+    return (
+        1 if question.get("level") == "3units" else 0,
+        1 if "bagrut" in tags or "3units" in tags else 0,
+        len(str(question.get("explanation") or "")),
+    )
+
+
+def _dedupe_questions(bank: dict) -> dict:
+    """אותה שאלה פעמיים מבלבלת. משאירים נוסח אחד, ומעדיפים בגרות 3 יח״ל."""
+    best: dict[str, dict] = {}
+    order: list[str] = []
+    for question in bank.get("questions") or []:
+        stem = " ".join(str(question.get("question") or "").split())
+        if not stem:
+            continue
+        if stem not in best:
+            order.append(stem)
+            best[stem] = question
+        elif _question_rank(question) > _question_rank(best[stem]):
+            best[stem] = question
+    kept = [best[stem] for stem in order]
+    bank["questions"] = kept
+    keep_ids = {str(item.get("id")) for item in kept}
+    for topic in bank.get("topics") or []:
+        topic["questions"] = [
+            item for item in (topic.get("questions") or []) if str(item.get("id")) in keep_ids
+        ]
     return bank
 
 
@@ -125,14 +157,14 @@ EXTRA: dict[str, list] = {
     "hebrew": [
         (
             "סמיכות וניקוד בסיסי",
-            "סמיכות וניקוד\n\n1. שתי מילים שיוצרות יחידה אחת, לפעמים נכתבות יחד.\n2. ניקוד עוזר לקרוא נכון אבל לא תמיד מופיע בטקסט יומיומי.\n3. בודקים: האם המילה נשמעת טבעית כשמקריאים בקול?\n\nדוגמה: בית ספר, שתי מילים, לא ביתספר.",
+            "סמיכות וניקוד\n\nסמיכות מחברת שני שמות ליחידה אחת: בית ספר הוא מוסד, לא בית ועוד ספר.\nכותבים בשתי מילים, אלא אם זו מילה אחת קבועה שלמדתם.\nניקוד עוזר לקרוא, אבל במבחן לרוב אין ניקוד — בודקים לפי הצליל והכלל.\n\nדוגמה: בית ספר, על הכיסא, ליד הבית. לא ביתספר ולא עלהכיסא.",
             [
-                ("איך כותבים נכון?", "בית ספר", ["ביתספר", "בית-ספרר", "בת ספר"], "שתי מילים נפרדות.", "Easy"),
-                ("איך כותבים נכון?", "דואר אלקטרוני", ["דואראלקטרוני", "דואר אלקטרוניי", "דואר אלקטרונייי"], "שלוש מילים.", "Medium"),
-                ("מה נכון?", "על הכיסא", ["עלהכיסא", "על הכסאא", "עלכיסא"], "על + הכיסא.", "Easy"),
-                ("מה נכון?", "ליד הבית", ["לידבית", "ליד הבת", "ליד הביתת"], "ליד הבית.", "Easy"),
-                ("מה נכון?", "מאחורי הגדר", ["מאחוריגדר", "מאחורי גדר", "מאחורי הגדרר"], "מאחורי + הגדר.", "Medium"),
-                ("מה נכון?", "כמו שאמרתי", ["כמושאמרתי", "כמו שאמרת", "כמו שאמרתיי"], "כמו שאמרתי.", "Easy"),
+                ("בחרו את הכתיב הנכון למוסד הלימודים", "בית ספר", ["ביתספר", "בית-ספרר", "בת ספר"], "בית ספר בשתי מילים נפרדות.", "Easy"),
+                ("בחרו את הכתיב הנכון: דואר + אלקטרוני", "דואר אלקטרוני", ["דואראלקטרוני", "דואר אלקטרוניי", "דואר אלקטרונייי"], "דואר אלקטרוני בשתי מילים.", "Medium"),
+                ("בחרו את הצירוף הכתוב נכון", "על הכיסא", ["עלהכיסא", "על הכסאא", "עלכיסא"], "על הכיסא, שתי מילים.", "Easy"),
+                ("בחרו את הצירוף הכתוב נכון", "ליד הבית", ["לידבית", "ליד הבת", "ליד הביתת"], "ליד הבית, שתי מילים.", "Easy"),
+                ("בחרו את הצירוף הכתוב נכון", "מאחורי הגדר", ["מאחוריגדר", "מאחורי גדר", "מאחורי הגדרר"], "מאחורי הגדר, עם ה׳ הידיעה.", "Medium"),
+                ("בחרו את הצירוף הכתוב נכון", "כמו שאמרתי", ["כמושאמרתי", "כמו שאמרת", "כמו שאמרתיי"], "כמו שאמרתי, שתי מילים.", "Easy"),
             ],
         ),
         (
@@ -140,7 +172,7 @@ EXTRA: dict[str, list] = {
             "חלקי דיבר\n\n1. שם עצם, אדם, חפץ, מקום (כלב, בית, תלמיד).\n2. פועל, פעולה (רץ, כותב, למדה).\n3. שם תואר, תיאור (גדול, ירוק, מהיר).\n4. תואר הפועל, איך עושים (לאט, היטב).\n\nדוגמה: הכלב השחור רץ מהר. עצם: כלב. תואר: שחור. פועל: רץ. תואר הפועל: מהר.",
             [
                 ("במשפט 'הכלב רץ' הפועל הוא", "רץ", ["הכלב", "ה", "אין פועל"], "הפעולה.", "Easy"),
-                ("במשפט 'בית גדול' שם התואר הוא", "גדול", ["בית", "ב", "אין"], "מתאר את הבית.", "Easy"),
+                ("במשפט 'בית גדול' שם התואר הוא", "גדול", ["בית", "שם עצם", "אין תואר כאן"], "מתאר את הבית.", "Easy"),
                 ("'תלמידה' הוא", "שם עצם", ["פועל", "תואר הפועל", "מילת יחס"], "אדם.", "Easy"),
                 ("'לאט' במשפט 'הולך לאט' הוא", "תואר הפועל", ["שם עצם", "פועל", "שם מספר"], "מתאר איך הולכים.", "Medium"),
                 ("'ירוק' ב'עלה ירוק' הוא", "שם תואר", ["פועל", "שם עצם חובה", "שאלה"], "צבע מתאר.", "Easy"),
@@ -151,14 +183,14 @@ EXTRA: dict[str, list] = {
     "english": [
         (
             "Present Perfect בסיסי",
-            "Present Perfect\n\n1. have/has + V3 (past participle).\n2. מדבר על חוויה או תוצאה עד עכשיו.\n3. I have visited London. She has finished.\n\nדוגמה: I have eaten. (כבר אכלתי, יש תוצאה עכשיו)",
+            "Present Perfect\n\nבונים כך: have או has + V3 (הצורה השלישית).\nמשתמשים כשיש חוויה עד עכשיו, או תוצאה שנשארת עכשיו.\nsince מצטרף לשנת התחלה. for מצטרף למשך זמן.\n\nדוגמה: I have eaten — כבר אכלתי. We have lived here since 2015 — מאז אותה שנה.",
             [
-                ("Choose correct", "I have seen that film.", ["I have saw that film.", "I has seen that film.", "I have see that film."], "have + V3.", "Medium"),
-                ("She ___ her homework.", "has finished", ["have finished", "has finish", "had finish now"], "she → has.", "Medium"),
-                ("Have you ever ___ to Paris?", "been", ["be", "went", "go"], "have been.", "Medium"),
-                ("They ___ just arrived.", "have", ["has", "had", "are have"], "they have.", "Easy"),
-                ("I haven't ___ yet.", "eaten", ["ate", "eat", "eating"], "haven't + V3.", "Medium"),
-                ("We have lived here ___ 2015.", "since", ["for 2015 only wrong", "at", "in since"], "since + year.", "Medium"),
+                ("בחרו את המשפט התקין באנגלית", "I have seen that film.", ["I have saw that film.", "I has seen that film.", "I have see that film."], "have + seen (V3).", "Medium"),
+                ("השלימו: She ___ her homework. (present perfect)", "has finished", ["have finished", "has finish", "had finished now"], "she → has + V3.", "Medium"),
+                ("השלימו: Have you ever ___ to Paris?", "been", ["be", "went", "go"], "Have you ever been = חוויה עד עכשיו.", "Medium"),
+                ("השלימו: They ___ just arrived.", "have", ["has", "had", "are"], "they → have, לא has.", "Easy"),
+                ("השלימו: I haven't ___ yet.", "eaten", ["ate", "eat", "eating"], "haven't + V3: eaten.", "Medium"),
+                ("השלימו: We have lived here ___ 2015.", "since", ["for", "at", "in"], "since + שנה; for + משך זמן.", "Medium"),
             ],
         ),
     ],

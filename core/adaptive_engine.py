@@ -52,6 +52,7 @@ EXAM_MIX = {
 SESSION_SHAPE = {
     "beginner": {
         "practice": 15,
+        "guided": 6,
         "compose": 10,
         "mock": 12,
         "timed": 12,
@@ -61,6 +62,7 @@ SESSION_SHAPE = {
     },
     "intermediate": {
         "practice": 16,
+        "guided": 6,
         "compose": 12,
         "mock": 15,
         "timed": 15,
@@ -70,6 +72,7 @@ SESSION_SHAPE = {
     },
     "advanced": {
         "practice": 18,
+        "guided": 8,
         "compose": 14,
         "mock": 20,
         "timed": 20,

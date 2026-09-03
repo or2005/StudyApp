@@ -293,7 +293,7 @@ ENGLISH = [
             _q("The window ___ by the storm last night.", "was broken", ["broke itself as required grammar", "is break", "has break"], "past simple passive.", "Hard"),
             _q("She asked me, “Where do you live?” → She asked me where I ___.", "lived", ["do live", "live you", "am live"], "question word order in reported questions: no do.", "Hard"),
             _q("He said, “I can help.” → He said he ___ help.", "could", ["can always unchanged as the only option", "may to", "must to"], "can → could.", "Hard"),
-            _q("Choose correct passive", "The letters were sent yesterday.", ["The letters sent yesterday were someone.", "The letters was send yesterday.", "Yesterday sent the letters."], "were + V3, plural.", "Hard"),
+            _q("בחרו את המשפט הסביל התקין", "The letters were sent yesterday.", ["The letters sent yesterday were someone.", "The letters was send yesterday.", "Yesterday sent the letters."], "were + V3, רבים.", "Hard"),
         ],
         ADV,
     ),

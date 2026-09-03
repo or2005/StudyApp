@@ -18,6 +18,12 @@ def _flatten(subject_key: str, data: dict) -> dict:
                 row.setdefault("subject", subject_key)
                 questions.append(row)
     data["questions"] = questions
+    try:
+        from core.quiz import scrub_question
+
+        data["questions"] = [scrub_question(row) for row in questions]
+    except Exception:
+        pass
 
     if not data.get("lessons"):
         lessons = []

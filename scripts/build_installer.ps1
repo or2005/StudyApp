@@ -55,7 +55,10 @@ powershell -File scripts\build_installer.ps1
 }
 
 Write-Host "Compiling installer with $iscc"
-& $iscc $iss
+$py = Join-Path $rootDir ".venv\Scripts\python.exe"
+if (-not (Test-Path $py)) { $py = "python" }
+$ver = & $py -c "from core.config import VERSION; print(VERSION)"
+& $iscc "/DAppVersion=$ver" $iss
 if ($LASTEXITCODE -ne 0) { throw "Inno Setup compile failed" }
 
 $searchDirs = @(

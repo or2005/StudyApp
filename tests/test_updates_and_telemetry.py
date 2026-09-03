@@ -23,8 +23,8 @@ class VersionCompareTests(unittest.TestCase):
         self.assertFalse(updates.is_newer("4.3.0", "4.3.0"))
         self.assertFalse(updates.is_newer("4.2.9", "4.3.0"))
 
-    def test_current_version_is_461(self):
-        self.assertEqual(VERSION, "4.6.1")
+    def test_current_version_is_470(self):
+        self.assertEqual(VERSION, "4.7.0")
         self.assertFalse(updates.is_newer(VERSION, VERSION))
 
     def test_download_candidates_prefer_setup_then_zip(self):
