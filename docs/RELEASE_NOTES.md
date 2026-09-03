@@ -1,15 +1,15 @@
-# StudyApp, Release Notes 4.5.1
+# StudyApp, Release Notes 4.5.2
 
 ## Overview
 StudyApp is a Hebrew-first **desktop** study app. It runs on **Windows 10**, **Windows 11**, and **Linux** (no browser).
 
 ## Downloads
-- Windows 10/11: `StudyApp-4.5.1-setup.exe` or `StudyApp-4.5.1-windows.zip` → `StudyApp.exe`
-- Linux (all common distros): `StudyApp-4.5.1-linux-portable.tar.gz` → `./StudyApp.sh`
+- Windows 10/11: `StudyApp-4.5.2-setup.exe` or `StudyApp-4.5.2-windows.zip` → `StudyApp.exe`
+- Linux (all common distros): `StudyApp-4.5.2-linux-portable.tar.gz` → `./StudyApp.sh`
 
 ## What's new
-- Settings: check for updates, install now, or install from a local file
-- Learning progress is kept
+- Settings: health scanner that repairs simple problems and tells the student what to do
+- Safe room: lock after 3 wrong passwords and a security notice to the developer
 
 ## Notes
 Educational support tool. Not an official Bagrut or Meimad exam.

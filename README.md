@@ -2,23 +2,23 @@
 
 תוכנת לימוד בעברית לחלון שולחן עבודה. **Windows 10, Windows 11, ולינוקס** (Ubuntu, Debian, Fedora, Arch, openSUSE, Alpine ועוד). בלי דפדפן ובלי שרת.
 
-**גרסה 4.5.1** · אור דדשב · dadshaev@gmail.com
+**גרסה 4.5.2** · אור דדשב · dadshaev@gmail.com
 
 ## הורדה
 
 | מערכת | קובץ |
 |---|---|
-| Windows 10 / 11 | `StudyApp-4.5.1-setup.exe` (קובץ התקנה) |
-| כל לינוקס | `StudyApp-4.5.1-linux-portable.tar.gz` |
+| Windows 10 / 11 | `StudyApp-4.5.2-setup.exe` (קובץ התקנה) |
+| כל לינוקס | `StudyApp-4.5.2-linux-portable.tar.gz` |
 
 ### Windows
 
-לחצו פעמיים על `StudyApp-4.5.1-setup.exe` ועקבו אחרי האשף. אפשר גם לחלץ את ה-ZIP ולהפעיל `StudyApp.exe`.
+לחצו פעמיים על `StudyApp-4.5.2-setup.exe` ועקבו אחרי האשף. אפשר גם לחלץ את ה-ZIP ולהפעיל `StudyApp.exe`.
 
 ### לינוקס
 
 ```
-tar -xzf StudyApp-4.5.1-linux-portable.tar.gz
+tar -xzf StudyApp-4.5.2-linux-portable.tar.gz
 cd StudyApp
 chmod +x StudyApp.sh
 ./StudyApp.sh

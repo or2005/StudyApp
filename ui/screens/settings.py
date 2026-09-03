@@ -18,7 +18,8 @@ class SettingsScreen(Page):
                  on_parent_report=None, on_question_editor=None, on_open_data=None,
                  on_toggle_autostart=None, autostart_on=False,
                  on_toggle_reminder=None, reminder_on=False, reminder_time="17:00",
-                 on_save_reminder_time=None,                  on_install_shortcuts=None, on_test_notify=None, on_secret=None):
+                 on_save_reminder_time=None,                  on_install_shortcuts=None, on_test_notify=None, on_secret=None,
+                 on_health=None):
         super().__init__(master)
         self.storage = storage
         self.on_exam_date = on_exam_date
@@ -115,6 +116,13 @@ class SettingsScreen(Page):
             auto_on,
             on_auto_update,
         )
+
+        help_card = self._card(
+            "בדיקת תקלות",
+            "הסורק בודק לבד אם משהו שבור, מתקן מה שאפשר, ומסביר מה לעשות.",
+        )
+        GhostButton(help_card, text=rtl("הרץ בדיקת תקלות"), height=42, width=200,
+                    command=on_health).pack(anchor="e", pady=(12, 0))
 
         danger = self._card("התחלה מחדש", "מוחק הרשמה, אבחון והתקדמות מהמחשב הזה.", danger=True)
         ModernButton(

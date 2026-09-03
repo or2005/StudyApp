@@ -1,5 +1,11 @@
 # Changelog
 
+## [4.5.2] - 2026-09-03
+
+### Added
+- Student health scanner in Settings: finds simple problems, repairs what it can, and says what to do
+- Safe-room lock after 3 wrong passwords, with a security notice to the developer
+
 ## [4.5.1] - 2026-09-03
 
 ### Added

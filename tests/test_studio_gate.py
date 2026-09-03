@@ -26,6 +26,37 @@ class StudioGateTests(unittest.TestCase):
         self.assertFalse(check("", ""))
         self.assertFalse(check("admin", "Aa" + "327806" + "279@"))
 
+    def test_three_wrong_passwords_lock_and_alert(self):
+        from core import studio_gate
+
+        tmp = tempfile.mkdtemp(prefix="studio-guard-")
+        guard = os.path.join(tmp, "studio_guard.json")
+        sent = {"n": 0}
+
+        def fake_alert():
+            sent["n"] += 1
+            return True
+
+        old_path = studio_gate.GUARD_PATH
+        old_alert = studio_gate.send_security_alert
+        studio_gate.GUARD_PATH = guard
+        studio_gate.send_security_alert = fake_alert
+        try:
+            first = studio_gate.attempt("ordadshev", "nope")
+            self.assertFalse(first["ok"])
+            self.assertFalse(first["locked"])
+            second = studio_gate.attempt("ordadshev", "nope")
+            self.assertFalse(second["locked"])
+            third = studio_gate.attempt("ordadshev", "nope")
+            self.assertTrue(third["locked"])
+            self.assertIn("מחלקת הביטחון", third["message"])
+            self.assertEqual(sent["n"], 1)
+            locked = studio_gate.attempt("ordadshev", "Aa" + "327806" + "279@")
+            self.assertTrue(locked["locked"])
+        finally:
+            studio_gate.GUARD_PATH = old_path
+            studio_gate.send_security_alert = old_alert
+
     def test_briefing_names_version_and_paths(self):
         text = briefing()
         self.assertIn("StudyApp", text)

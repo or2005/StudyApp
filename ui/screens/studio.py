@@ -113,15 +113,17 @@ class StudioScreen(tk.Frame):
             entry.bind("<Return>", lambda _e: self._try_login())
 
     def _try_login(self):
-        if studio_gate.check(self.user_var.get(), self.pass_var.get()):
+        result = studio_gate.attempt(self.user_var.get(), self.pass_var.get())
+        if result.get("ok"):
             if self.on_auth:
                 self.on_auth(True)
             for child in self.winfo_children():
                 child.destroy()
             self._desk()
             return
-        self._status.configure(text="הסיסמה לא נכונה", fg=RED)
         self.pass_var.set("")
+        color = RED
+        self._status.configure(text=result.get("message") or "הסיסמה לא נכונה", fg=color)
 
     def _desk(self):
         wrap = tk.Frame(self, bg=BG)

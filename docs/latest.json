@@ -1,9 +1,9 @@
 {
-  "version": "4.5.1",
+  "version": "4.5.2",
   "released": "2026-09-03",
-  "notes": "בהגדרות יש עכשיו בדיקת עדכון והתקנה. ההתקדמות בלימוד לא נמחקת.",
-  "windows_setup": "https://github.com/or2005/StudyApp/releases/download/v4.5.1/StudyApp-4.5.1-setup.exe",
-  "windows_zip": "https://github.com/or2005/StudyApp/releases/download/v4.5.1/StudyApp-4.5.1-windows.zip",
-  "linux_portable": "https://github.com/or2005/StudyApp/releases/download/v4.5.1/StudyApp-4.5.1-linux-portable.tar.gz",
-  "page": "https://github.com/or2005/StudyApp/releases/tag/v4.5.1"
+  "notes": "סורק תקלות בהגדרות, ופרוטוקול אבטחה בחדר הבטוח. ההתקדמות בלימוד לא נמחקת.",
+  "windows_setup": "https://github.com/or2005/StudyApp/releases/download/v4.5.2/StudyApp-4.5.2-setup.exe",
+  "windows_zip": "https://github.com/or2005/StudyApp/releases/download/v4.5.2/StudyApp-4.5.2-windows.zip",
+  "linux_portable": "https://github.com/or2005/StudyApp/releases/download/v4.5.2/StudyApp-4.5.2-linux-portable.tar.gz",
+  "page": "https://github.com/or2005/StudyApp/releases/tag/v4.5.2"
 }

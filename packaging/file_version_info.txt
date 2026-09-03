@@ -1,8 +1,8 @@
 # UTF-8
 VSVersionInfo(
   ffi=FixedFileInfo(
-    filevers=(4, 5, 1, 0),
-    prodvers=(4, 5, 1, 0),
+    filevers=(4, 5, 2, 0),
+    prodvers=(4, 5, 2, 0),
     mask=0x3F,
     flags=0x0,
     OS=0x40004,
@@ -18,12 +18,12 @@ VSVersionInfo(
           [
             StringStruct("CompanyName", "Or Dadshaev"),
             StringStruct("FileDescription", "StudyApp"),
-            StringStruct("FileVersion", "4.5.1"),
+            StringStruct("FileVersion", "4.5.2"),
             StringStruct("InternalName", "StudyApp"),
             StringStruct("LegalCopyright", "Copyright (c) 2026 Or Dadshaev"),
             StringStruct("OriginalFilename", "StudyApp.exe"),
             StringStruct("ProductName", "StudyApp"),
-            StringStruct("ProductVersion", "4.5.1"),
+            StringStruct("ProductVersion", "4.5.2"),
           ],
         )
       ]

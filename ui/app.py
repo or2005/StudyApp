@@ -549,6 +549,12 @@ class StudyApp(ctk.CTk):
             telemetry.maybe_weekly(self.storage)
         except Exception as exc:
             log.info("telemetry boot skipped: %s", exc)
+        try:
+            from core import health
+
+            health.scan_and_repair()
+        except Exception as exc:
+            log.info("health scan skipped: %s", exc)
         if self.storage.get_pref("auto_update_check", True):
             self._run_update_check(manual=False)
 
@@ -949,7 +955,16 @@ class StudyApp(ctk.CTk):
             on_install_shortcuts=self._install_os_shortcuts,
             on_test_notify=self._test_notify,
             on_secret=self._open_studio,
+            on_health=self._run_health_scan,
         ).pack(fill="both", expand=True)
+
+    def _run_health_scan(self):
+        from core import health
+
+        report = health.scan_and_repair()
+        dialogs.info("בדיקת תקלות", report.get("message") or "הבדיקה הסתיימה.")
+        if self.active_tab == "settings":
+            self._show_settings()
 
     def _clear_reports(self):
         if not dialogs.confirm("דיווחים", "לנקות את כל הדיווחים? השאלות יחזרו לתרגול."):
