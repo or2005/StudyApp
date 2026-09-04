@@ -520,6 +520,10 @@ class PracticeScreen(Page):
             child.destroy()
         card, inner = make_card(self.feedback, accent=color, thick=2, pady=12, gold_top=True)
         card.pack(fill="x")
+        from core.teach import teach_after_answer
+
+        blocks = teach_after_answer(q, is_correct=bool(is_correct), subject=self.subject_key or "")
+        msg = blocks.get("status") or msg
         tk.Label(
             inner, text=rtl(msg), bg=COLORS["card_bg"], fg=color,
             font=(ADHD_CONFIG["font_family"], font_size(17), "bold"), anchor="e",
@@ -528,8 +532,6 @@ class PracticeScreen(Page):
             fast_label(
                 inner, f"כתבת: {typed}", size=13, muted=True, bg=COLORS["card_bg"], wrap=720,
             ).pack(anchor="e", pady=(4, 0))
-        from core.teach import display_explanation, feedback_note
-
         opts = q.get("options") or []
         idx = q.get("answer")
         correct = q.get("correct_answer") or ""
@@ -539,10 +541,19 @@ class PracticeScreen(Page):
             fast_label(
                 inner, f"צריך היה לכתוב: {correct}", size=15, bg=COLORS["card_bg"], wrap=720,
             ).pack(anchor="e", pady=(6, 0))
-        explanation = display_explanation(q, self.subject_key or "")
-        fast_label(
-            inner, f"הסבר: {explanation}", size=14, bg=COLORS["card_bg"], wrap=720,
-        ).pack(anchor="e", pady=(6, 4))
+        if blocks.get("why"):
+            fast_label(
+                inner, f"למה: {blocks['why']}", size=14, bg=COLORS["card_bg"], wrap=720,
+            ).pack(anchor="e", pady=(6, 2))
+        if blocks.get("how"):
+            fast_label(
+                inner, f"איך לחשוב: {blocks['how']}", size=13, muted=True, bg=COLORS["card_bg"], wrap=720,
+            ).pack(anchor="e", pady=(0, 2))
+        if blocks.get("watch"):
+            label = "שימו לב" if not is_correct else "קחו מזה"
+            fast_label(
+                inner, f"{label}: {blocks['watch']}", size=13, muted=True, bg=COLORS["card_bg"], wrap=720,
+            ).pack(anchor="e", pady=(0, 2))
         if not self.exam_mode:
             try:
                 from core.illustrations.schema import get_visual
@@ -550,18 +561,24 @@ class PracticeScreen(Page):
 
                 if get_visual(q):
                     VisualPanel(inner, q, mode="explain", bg=COLORS["card_bg"], max_width=680).pack(
-                        fill="x", pady=(4, 8),
+                        fill="x", pady=(4, 4),
                     )
+                    if blocks.get("picture"):
+                        fast_label(
+                            inner, blocks["picture"], size=12, muted=True, bg=COLORS["card_bg"], wrap=720,
+                        ).pack(anchor="e", pady=(0, 6))
             except Exception:
                 pass
-        note = feedback_note(q, correct=bool(is_correct), subject=self.subject_key or "")
-        if note and note[:40] not in explanation:
-            label = "כלל קצר" if is_correct else "שימו לב"
-            fast_label(
-                inner, f"{label}: {note}", size=13, muted=True, bg=COLORS["card_bg"], wrap=720,
-            ).pack(anchor="e", pady=(0, 8))
-        if self.speaker is not None and self.speaker.enabled:
-            self.speaker.say(explanation)
+        spoken = " ".join(
+            p for p in (
+                blocks.get("why"),
+                blocks.get("how"),
+                blocks.get("watch"),
+                blocks.get("picture"),
+            ) if p
+        )
+        if self.speaker is not None and self.speaker.enabled and spoken:
+            self.speaker.say(spoken)
         ModernButton(
             inner, text=rtl("לשאלה הבאה  (Enter)"), width=220, command=self._render,
         ).pack(anchor="e")

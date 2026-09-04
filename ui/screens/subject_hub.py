@@ -8,7 +8,7 @@ from ui.widgets import GhostButton, ModernButton, ProgressBar, SUBJECT_ICONS, bo
 
 class SubjectHubScreen(Page):
     def __init__(self, master, subject_key, on_mode_select, on_back, stats=None, storage=None,
-                 level_info=None, specs=None, topics=None):
+                 level_info=None, specs=None, topics=None, coach=None):
         super().__init__(master)
         self.subject_key = subject_key
         self.on_mode_select = on_mode_select
@@ -18,6 +18,7 @@ class SubjectHubScreen(Page):
         self.level_info = level_info or {}
         self.specs = specs or {}
         self.topics = topics or []
+        self.coach = coach or {}
         self._topics_open = False
         self._topics_host = None
         self._setup_ui()
@@ -116,6 +117,22 @@ class SubjectHubScreen(Page):
         fast_label(self, "  ·  ".join(bits), size=12, muted=True, bg=COLORS["bg"]).pack(
             anchor="e", pady=(2, 8)
         )
+
+        if self.coach.get("message") and self.coach.get("tone") in {
+            "struggle", "weak_topic", "demote", "near_promote",
+        }:
+            note, ninner = make_card(self, accent=COLORS["accent"], pady=10)
+            note.pack(fill="x", pady=(0, 10))
+            tk.Label(
+                ninner, text=rtl(self.coach.get("title") or "האנליסט"),
+                bg=COLORS["card_bg"], fg=COLORS["text_main"],
+                font=(ADHD_CONFIG["font_family"], font_size(14), "bold"),
+                anchor="e", justify="right",
+            ).pack(fill="x")
+            fast_label(
+                ninner, self.coach.get("message") or "",
+                size=12, muted=True, bg=COLORS["card_bg"], wrap=720,
+            ).pack(fill="x", pady=(2, 0))
 
         can_final = True
         if self.storage:

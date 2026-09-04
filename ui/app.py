@@ -845,7 +845,12 @@ class StudyApp(ctk.CTk):
             unpracticed_key=unpracticed,
             review_batch=REVIEW_BATCH,
         )
-        self._pack_next_action(nxt)
+        coach = self.adaptive_engine.evaluate()
+        note = ""
+        if coach.get("tone") in {"struggle", "weak_topic", "focus_weak"} and coach.get("message"):
+            if nxt.get("id") in {"weak", "subjects", "unpracticed"}:
+                note = coach["message"]
+        self._pack_next_action(nxt, note=note)
 
         heading(self.content, "המקצועות שלך", 15).pack(anchor="e", pady=(2, 4))
         self._pack_subject_grid(mastery, HOME_SUBJECTS)
@@ -1875,10 +1880,12 @@ class StudyApp(ctk.CTk):
         from core.session_review import subject_topic_catalog
 
         topics = subject_topic_catalog(data, compose_pool(subject_key_value, []))
+        coach = self.adaptive_engine.evaluate(subject_key_value)
         SubjectHubScreen(
             self.content, subject_key_value,
             on_mode_select=self._start_mode, on_back=self._show_dashboard, stats=stats,
             storage=self.storage, level_info=snap, specs=specs, topics=topics,
+            coach=coach,
         ).pack(fill="both", expand=True)
 
     def _clean_pool(self, pool):

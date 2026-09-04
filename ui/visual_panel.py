@@ -46,7 +46,7 @@ class VisualPanel(tk.Frame):
         if self._mode == "lesson":
             return min(720, self._max_width), 210
         if self._mode == "explain":
-            return min(680, self._max_width), 190
+            return min(680, self._max_width), 240
         return min(640, self._max_width), 140
 
     def _build(self):

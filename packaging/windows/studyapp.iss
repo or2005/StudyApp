@@ -2,7 +2,7 @@
 ; Build:  powershell -File scripts\build_installer.ps1
 
 #ifndef AppVersion
-  #define AppVersion "4.8.0"
+  #define AppVersion "4.9.0"
 #endif
 
 #define AppName "StudyApp"

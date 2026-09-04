@@ -1,17 +1,17 @@
-# StudyApp, Release Notes 4.8.0
+# StudyApp, Release Notes 4.9.0
 
 ## Overview
 StudyApp is a Hebrew-first **desktop** study app.
 
 ## Downloads
-- Windows: `StudyApp-4.8.0-setup.exe` or `StudyApp-4.8.0-windows.zip`
-- Linux: `StudyApp-4.8.0-linux-portable.tar.gz`
+- Windows: `StudyApp-4.9.0-setup.exe` or `StudyApp-4.9.0-windows.zip`
+- Linux: `StudyApp-4.9.0-linux-portable.tar.gz`
 
 ## What's new
-- History illustrations show readable Hebrew (no reversed captions)
-- Clearer memorial candle visual; softer captions without AI-style dashes
-- Home and sidebar: one next step, exams under one menu, human wording
-- Meimad exam card labeled «מבחן מימד» with short clear lines
+- After each answer: clear **why / how to think / takeaway**, not a one-line repeat
+- With illustrations: larger explain view + tip that links the picture to the answer
+- Cleaner stems across subjects (false «מי היה…», leading dashes, Hebrew hyphens)
+- Stronger adaptive analyst: more drill on weak topics when a student is struggling
 - Progress is never wiped by an update
 
 ## License

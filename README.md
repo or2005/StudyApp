@@ -1,24 +1,24 @@
-# StudyApp
+﻿# StudyApp
 
 תוכנת לימוד בעברית לחלון שולחן עבודה. **Windows 10, Windows 11, ולינוקס** (Ubuntu, Debian, Fedora, Arch, openSUSE, Alpine ועוד). בלי דפדפן ובלי שרת.
 
-**גרסה 4.8.0** · אור דדשב · dadshaev@gmail.com
+**גרסה 4.9.0** · אור דדשב · dadshaev@gmail.com
 
 ## הורדה
 
 | מערכת | קובץ |
 |---|---|
-| Windows 10 / 11 | `StudyApp-4.8.0-setup.exe` (קובץ התקנה) |
-| כל לינוקס | `StudyApp-4.8.0-linux-portable.tar.gz` |
+| Windows 10 / 11 | `StudyApp-4.9.0-setup.exe` (קובץ התקנה) |
+| כל לינוקס | `StudyApp-4.9.0-linux-portable.tar.gz` |
 
 ### Windows
 
-לחצו פעמיים על `StudyApp-4.8.0-setup.exe` ועקבו אחרי האשף. אפשר גם לחלץ את ה-ZIP ולהפעיל `StudyApp.exe`.
+לחצו פעמיים על `StudyApp-4.9.0-setup.exe` ועקבו אחרי האשף. אפשר גם לחלץ את ה-ZIP ולהפעיל `StudyApp.exe`.
 
 ### לינוקס
 
 ```
-tar -xzf StudyApp-4.8.0-linux-portable.tar.gz
+tar -xzf StudyApp-4.9.0-linux-portable.tar.gz
 cd StudyApp
 chmod +x StudyApp.sh
 ./StudyApp.sh

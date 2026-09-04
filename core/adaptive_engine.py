@@ -606,17 +606,33 @@ class AdaptiveEngine:
         if hasattr(self.storage, "recent_question_ids"):
             avoid = self.storage.recent_question_ids(subject)
         wanted: list[str] = []
+        explicit_topics = bool(prefer_topic) or bool(prefer_topics)
         if prefer_topic:
             wanted.append(str(prefer_topic))
         for topic in prefer_topics or []:
             name = str(topic or "").strip()
             if name and name not in wanted:
                 wanted.append(name)
+        # תרגול רגיל בלי נושא ידני: האנליסט דוחף לנושאים החלשים
+        if not wanted and mode in {"practice", "smart_practice", "compose"}:
+            for topic in self.weak_topics(subject, limit=3):
+                if topic not in wanted:
+                    wanted.append(topic)
         if wanted:
             allowed = set(wanted)
             primary = [q for q in pool if q.get("topic") in allowed]
             secondary = [q for q in pool if q.get("topic") not in allowed]
-            first_n = min(want, len(primary))
+            # נושא בלבד: לא לחרוג ממספר השאלות הזמינות בנושא
+            if topic_only and primary:
+                want = min(want, len(primary))
+            # נושא שנבחר במפורש / topic_only: כל השאלות מהנושא.
+            # דחיפה אוטומטית לנושא חלש: רוב השאלות משם, לא הכל.
+            if explicit_topics or topic_only:
+                first_n = min(want, len(primary)) if primary else 0
+            else:
+                struggle = self.struggling(subject)
+                share = 0.85 if struggle else 0.65
+                first_n = min(want, max(1, int(want * share)), len(primary)) if primary else 0
             picked = pick_by_mix(primary, params["mix"], first_n, scorer=scorer, avoid_ids=avoid) if primary else []
             need = want - len(picked)
             if need > 0 and secondary and not topic_only:
@@ -642,24 +658,55 @@ class AdaptiveEngine:
             buckets.setdefault(topic, []).append(bool(row.get("correct")))
         ranked: list[tuple[float, int, str]] = []
         for topic, flags in buckets.items():
-            if len(flags) < 3:
+            # גם אחרי 2 טעויות ברצף כדאי להתחיל לחזק
+            if len(flags) < 2:
                 continue
             acc = sum(flags) / len(flags)
-            if acc <= 0.64:
+            threshold = 0.55 if len(flags) >= 4 else 0.50
+            if acc <= threshold:
                 ranked.append((acc, -len(flags), topic))
         ranked.sort()
         return [topic for _, __, topic in ranked[:limit]]
 
+    def struggling(self, subject: str) -> dict[str, Any] | None:
+        """כשהתלמיד ממש נכשל במקצוע/נושא — אות לאימון חזק יותר."""
+        snap = self.snapshot(subject)
+        total = int(snap.get("recent_total") or 0)
+        acc = float(snap.get("recent_accuracy") or 100)
+        weak = list(snap.get("weak_topics") or [])
+        if total >= 6 and acc < 50:
+            return {
+                "severity": "subject",
+                "subject": subject,
+                "accuracy": acc,
+                "total": total,
+                "topics": weak,
+            }
+        if weak and total >= 4 and acc < 62:
+            return {
+                "severity": "topic",
+                "subject": subject,
+                "accuracy": acc,
+                "total": total,
+                "topics": weak,
+            }
+        return None
+
     def _content_scorer(self, subject: str, srs):
         weak = set(self.weak_topics(subject))
         srs_fn = srs.score_question if srs is not None and hasattr(srs, "score_question") else None
-        if not weak and srs_fn is None:
+        struggle = self.struggling(subject)
+        if not weak and srs_fn is None and not struggle:
             return None
 
         def score(question: dict) -> float:
             value = float(srs_fn(question)) if srs_fn else 0.0
-            if question.get("topic") in weak:
-                value += 35.0
+            topic = str(question.get("topic") or "")
+            if topic in weak:
+                value += 55.0 if struggle else 35.0
+            # כשנכשלים — מעדיפים שאלות דומות בסגנון (אותו נושא + אותה רמת קושי)
+            if struggle and topic in set(struggle.get("topics") or weak):
+                value += 20.0
             return value
 
         return score
@@ -744,19 +791,33 @@ class AdaptiveEngine:
                     "title": f"קרוב לעלייה ב{name}",
                     "message": (
                         f"ב{name} יש {have} נכונות מתוך {promo['window']} האחרונות. "
-                        f"עוד קצת יציבות — והרמה תעלה ל{LEVEL_HE[nxt]}."
+                        f"עוד קצת יציבות והרמה תעלה ל{LEVEL_HE[nxt]}."
                     ),
                     "action": "push_for_level",
                 }
         weak = snap.get("weak_topics") or []
+        struggle = self.struggling(snap["subject"])
+        if struggle and struggle.get("severity") == "subject":
+            topics = " · ".join((struggle.get("topics") or weak)[:2]) or "החומר האחרון"
+            return {
+                "tone": "struggle",
+                "title": f"עוצרים רגע ב{name}",
+                "message": (
+                    f"ב{name} יצא {int(struggle['accuracy'])}% ב{struggle['total']} האחרונות. "
+                    f"האנליסט ישים עכשיו שאלות בסגנון שקשה שם"
+                    + (f" ({topics})" if topics else "")
+                    + ", עם הסבר אחרי כל תשובה."
+                ),
+                "action": "drill_weak_topic",
+            }
         if weak and snap.get("recent_accuracy", 100) < 70:
             topics = " · ".join(weak[:2])
             return {
                 "tone": "weak_topic",
                 "title": f"חיזוק ממוקד ב{name}",
                 "message": (
-                    f"האנליסט מזהה קושי ב{topics}. "
-                    "תרגול קצר שם יזיז יותר משעות על חומר שכבר יושב."
+                    f"יש קושי ב{topics}. "
+                    "התרגול הבא ייטה לשם, כדי לסגור את הפער במקום לברוח למקצוע אחר."
                 ),
                 "action": "drill_weak_topic",
             }
@@ -823,8 +884,21 @@ class AdaptiveEngine:
         measured = [item for item in snapshots if item.get("recent_total", 0) >= 5]
         if measured:
             weakest = min(measured, key=lambda item: (item["recent_accuracy"], -item["recent_total"]))
+            struggle = self.struggling(weakest["subject"])
+            name = subject_label(weakest["subject"])
+            if struggle and struggle.get("severity") == "subject":
+                topics = " · ".join((struggle.get("topics") or [])[:2])
+                return {
+                    "tone": "struggle",
+                    "title": f"{name}: צריך עזרה עכשיו",
+                    "message": (
+                        f"ב{name} רק {int(struggle['accuracy'])}% ב{struggle['total']} האחרונות. "
+                        + (f"הנושא שתוקעים בו: {topics}. " if topics else "")
+                        + "כנסו לתרגול שם. האנליסט יבחר שאלות באותו סגנון ויסביר אחרי כל תשובה."
+                    ),
+                    "action": "practice_weak_subject",
+                }
             if weakest["recent_accuracy"] < 62:
-                name = subject_label(weakest["subject"])
                 return {
                     "tone": "focus_weak",
                     "title": f"{name} צריך חיזוק",

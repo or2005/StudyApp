@@ -1,5 +1,16 @@
 # Changelog
 
+## [4.9.0] - 2026-09-04
+
+### Fixed
+- Unclear stems polished across banks (false «מי היה…», leading dash junk, ASCII hyphens in Hebrew)
+- Soft filler prefixes like «הנקודה העדינה» and stray years stripped from student-facing explanations
+
+### Updated
+- Post-answer feedback teaches with blocks: למה / איך לחשוב / קחו מזה, plus picture coaching when a visual exists
+- Adaptive practice pushes harder toward weak topics when the student is struggling
+- Explain-mode illustrations are taller so drawings are less cropped
+
 ## [4.8.0] - 2026-09-04
 
 ### Fixed
