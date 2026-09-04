@@ -21,7 +21,9 @@ class SettingsScreen(Page):
                  on_toggle_reminder=None, reminder_on=False, reminder_time="17:00",
                  on_save_reminder_time=None,                  on_install_shortcuts=None, on_test_notify=None, on_secret=None,
                  on_health=None, on_helper_lang=None, helper_lang="he",
-                 on_hebrew_fix=None, hebrew_fix="auto"):
+                 on_hebrew_fix=None, hebrew_fix="auto",
+                 on_ollama=None, ollama_on=True, ollama_status="", on_ollama_check=None,
+                 on_calm=None, calm_on=False):
         super().__init__(master)
         self.storage = storage
         self.on_exam_date = on_exam_date
@@ -77,6 +79,41 @@ class SettingsScreen(Page):
         )
         self.date_err = fast_label(learn, "", size=12, muted=True, bg=COLORS["card_bg"])
         self.date_err.pack(anchor="e")
+
+        ai_card = self._card(
+            "עוזר במחשב",
+            "מנסח שאלות בשפה פשוטה, מסביר שלב־שלב, ומתאים תרגול לפי הרמה שלכם. רץ אצלכם, בלי מפתח API.",
+        )
+        self._toggle(
+            ai_card,
+            "עוזר במחשב: דולק" if ollama_on else "עוזר במחשב: כבוי",
+            ollama_on,
+            on_ollama,
+        )
+        self._toggle(
+            ai_card,
+            "מצב רגוע: דולק" if calm_on else "מצב רגוע: כבוי",
+            calm_on,
+            on_calm,
+        )
+        status = (ollama_status or "").strip() or "עוד לא נבדק. לחצו בדיקת חיבור."
+        if ollama_on:
+            tip = "כשדולק: בתרגול יש «בשפה פשוטה» ו«שלב־שלב». בלי חיבור עוברים אוטומטית למצב מקומי."
+        else:
+            tip = "כבוי: תרגול רגיל. אפשר להדליק בכל רגע. העוזר גם בתפריט הצד."
+        fast_label(ai_card, tip, size=13, muted=True, bg=COLORS["card_bg"], wrap=740).pack(
+            fill="x", pady=(10, 0)
+        )
+        fast_label(
+            ai_card,
+            f"סטטוס: {status}",
+            size=13, muted=True, bg=COLORS["card_bg"], wrap=740,
+        ).pack(fill="x", pady=(4, 0))
+        if on_ollama_check:
+            GhostButton(
+                ai_card, text=rtl("בדיקת חיבור"), height=42, width=180,
+                command=on_ollama_check,
+            ).pack(anchor="e", pady=(10, 0))
 
         data = self._card("נתונים", f"פרופיל פעיל: {profile_name or 'תלמיד'}. גיבוי לקובץ, בלי רשת.")
         row = tk.Frame(data, bg=COLORS["card_bg"])

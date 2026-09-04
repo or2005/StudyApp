@@ -247,8 +247,19 @@ def main() -> int:
     note(f"filled entries: {filled}")
     if filled < 2:
         bug("could not fill registration fields")
-    if not click_named(app, "המשך למבחן אבחון"):
+    frame = next((w for w in walk(app.content) if isinstance(w, OnboardingFrame)), None)
+    if frame is not None:
+        try:
+            frame._terms_ok.set(True)
+        except Exception:
+            pass
+    if not click_named(app, "המשך"):
         bug("registration next button not found")
+    pump(app, 120)
+    frame = next((w for w in walk(app.content) if isinstance(w, OnboardingFrame)), None)
+    if frame is not None:
+        frame.advance_setup_for_tests()
+        frame._stage("diagnostic")
     pump(app, 150)
     shot(app, "02_diagnostic")
 

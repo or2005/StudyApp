@@ -60,6 +60,23 @@ class RtlTextTests(unittest.TestCase):
         text = rtltext.apply("עדכן עכשיו")
         self.assertIn("עכשיו", rtltext.strip_marks(text).split()[0])
 
+    def test_auto_does_not_reverse_pure_hebrew(self):
+        """Windows לועזי: auto חייב להשאיר סדר מילים, לא להפוך שאלות/ברכות."""
+        rtltext.set_mode("auto")
+        with patch("core.rtltext.windows_has_rtl_ui", return_value=False):
+            src = "בוקר טוב, נועה"
+            shown = rtltext.strip_marks(rtltext.apply(src))
+            self.assertEqual(shown, src)
+            q = "מי הייתה ראשת הממשלה הראשונה?"
+            self.assertEqual(rtltext.strip_marks(rtltext.apply(q)), q)
+
+    def test_auto_keeps_greeting_order(self):
+        rtltext.set_mode("auto")
+        with patch("core.rtltext.windows_has_rtl_ui", return_value=False):
+            shown = rtltext.strip_marks(rtltext.apply("בוקר טוב, נועה"))
+        self.assertEqual(shown, "בוקר טוב, נועה")
+        self.assertFalse(shown.startswith("נועה"))
+
     def test_english_keeps_question_mark(self):
         src = "Could you help me, please?"
         with patch("core.rtltext.resolved_mode", return_value="words"):

@@ -30,19 +30,26 @@ class ResultsScreen(Page):
         exam = mode in {"mock", "final", "timed", "meimad"}
         wrong = session.wrong_answers()
 
-        if percent >= 90:
-            msg, color = "מצוין. ממש חזק.", COLORS["success"]
+        if exam:
+            if percent >= 75:
+                msg, color = "סיימת. שמרו על הקצב, וחזקו את הנושאים החלשים.", COLORS["success"]
+            elif percent >= 55:
+                msg, color = "יש בסיס. תרגול קצר על השגויות יעזור יותר ממבחן נוסף עכשיו.", COLORS["accent"]
+            else:
+                msg, color = "לא נורא. חוזרים לנושא החלש בלי לחץ של שעון.", COLORS["danger"]
+        elif percent >= 90:
+            msg, color = "יפה מאוד. החומר יושב.", COLORS["success"]
         elif percent >= 70:
-            msg, color = "טוב. עוד קצת תרגול והחומר יושב.", COLORS["accent"]
+            msg, color = "טוב. עוד קצת תרגול וזה נדבק.", COLORS["accent"]
         elif percent >= 60:
-            msg, color = "עברת. כל הכבוד.", COLORS["success"]
+            msg, color = "עברת. אפשר להמשיך מכאן.", COLORS["success"]
         else:
-            msg, color = "התחלה טובה. חוזרים לשיעור ואז עוד 5 שאלות.", COLORS["danger"]
+            msg, color = "התחלה. כדאי לחזור לשיעור ואז עוד כמה שאלות.", COLORS["danger"]
 
-        card, inner = make_card(self, accent=color, thick=2, pady=16, gold_top=True)
+        card, inner = make_card(self, accent=color, thick=1, pady=16, gold_top=False)
         card.pack(fill="x", pady=(4, 10))
-        kicker(inner, "תוצאה", bg=COLORS["card_bg"]).pack(anchor="e")
-        heading(inner, "סיימת את ישיבת מימ״ד" if mode == "meimad" else ("סיימת את המבחן" if exam else "סיימת את הסשן"), 24).pack(anchor="e")
+        kicker(inner, "סיימת", bg=COLORS["card_bg"]).pack(anchor="e")
+        heading(inner, "סיימת את ישיבת מימ״ד" if mode == "meimad" else ("סיימת את המבחן" if exam else "סיימת את התרגול"), 22).pack(anchor="e")
         tk.Label(
             inner,
             text=rtl(f"{score} מתוך {len(session.questions)}   ({percent}%)"),
@@ -143,9 +150,20 @@ class ResultsScreen(Page):
             return
         card, inner = make_card(self, accent=COLORS["primary"], pady=12)
         card.pack(fill="x", pady=(0, 10))
-        heading(inner, "מה האנליסט רואה", 18).pack(anchor="e")
+        heading(inner, "מה כדאי לשים לב", 17).pack(anchor="e")
         if trend:
             fast_label(inner, trend, size=13, muted=True, bg=COLORS["card_bg"]).pack(anchor="e", pady=(4, 0))
+        exam_label = str(insight.get("exam_label") or "").strip()
+        exam_pred = insight.get("exam_prediction")
+        if exam_pred is not None and exam_label:
+            fast_label(
+                inner,
+                f"תחזית מבחן: כ־{exam_pred}% · {exam_label}",
+                size=13,
+                muted=True,
+                bg=COLORS["card_bg"],
+                wrap=820,
+            ).pack(anchor="e", pady=(4, 0))
         if weak:
             fast_label(
                 inner, "לחיזוק: " + " · ".join(weak),

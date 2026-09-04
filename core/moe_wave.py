@@ -34,7 +34,7 @@ def _q(question, correct, wrongs, why, diff="Medium", hint=""):
 
 def _why(lead: str, extra: str = "") -> str:
     body = f"{lead} {extra}".strip()
-    return body + " אם טעיתם, חזרו לשיעור, פסלו מה שלא מתאים להגדרה, ובדקו מה בדיוק נשאל."
+    return body
 
 
 def _chunk(title: str, theory: str, rows: list, cat: str, size: int = 24) -> list:

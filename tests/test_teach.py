@@ -38,8 +38,9 @@ class TeachTests(unittest.TestCase):
 
     def test_short_unmatched_topic_still_gets_teaching(self):
         text = enrich_explanation("yes", "Because.", "unknown-topic", "english")
-        self.assertGreaterEqual(len(text), 40)
+        self.assertIn("yes", text)
         self.assertIn("Because", text)
+        self.assertGreaterEqual(len(text), 20)
 
     def test_polish_accepts_subject(self):
         text = polish_explanation("בית ספר", "", "סמיכות", "hebrew")
@@ -269,9 +270,9 @@ class TeachTests(unittest.TestCase):
         self.assertNotIn("ברגל", prompt)
 
     def test_guided_session_is_short(self):
-        beginner = session_params("beginner", "guided")
+        beginner = session_params("starter", "guided")
         advanced = session_params("advanced", "guided")
-        self.assertEqual(beginner["count"], 6)
+        self.assertEqual(beginner["count"], 5)
         self.assertEqual(advanced["count"], 8)
         self.assertFalse(beginner["exam"])
 

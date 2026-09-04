@@ -12,6 +12,8 @@ def pick_next_action(
     weak_keys: list[str] | None = None,
     unpracticed_key: str | None = None,
     review_batch: int = 20,
+    goal: str | None = None,
+    preferred_subject: str | None = None,
 ) -> dict:
     """מחזיר id, title, detail, cta, ו־subject אם רלוונטי."""
     weak_keys = list(weak_keys or [])
@@ -21,7 +23,7 @@ def pick_next_action(
         return {
             "id": "review",
             "title": f"יש {n} שאלות לחזרה",
-            "detail": "כבר ראית אותן. עכשיו הן נדבקות.",
+            "detail": "חזרה קצרה על מה שכבר ראיתם.",
             "cta": "לחזרה",
             "subject": None,
         }
@@ -51,6 +53,32 @@ def pick_next_action(
             "detail": "פתיחה רגועה, בלי לחץ של מבחן.",
             "cta": f"לפתוח {name}",
             "subject": unpracticed_key,
+        }
+    if goal == "meimad":
+        return {
+            "id": "meimad",
+            "title": "היום: תרגול לקראת מימ״ד",
+            "detail": "עברית, אנגלית וחשבון — קצב קצר לפני ישיבה מלאה.",
+            "cta": "למימ״ד",
+            "subject": None,
+        }
+    if goal == "general":
+        key = preferred_subject or (weak_keys[0] if weak_keys else unpracticed_key)
+        if key:
+            name = subject_label(key)
+            return {
+                "id": "weak" if key in weak_keys else "unpracticed",
+                "title": f"היום: חיזוק לקראת מבחן כללי — {name}",
+                "detail": "עדיף מקצוע אחד היום, לא שלושה.",
+                "cta": f"לתרגל {name}",
+                "subject": key,
+            }
+        return {
+            "id": "general_exam",
+            "title": "היום: הכנה למבחן כללי",
+            "detail": "בחרו מקצוע חלש למטה, או פתחו מבחן כללי כשמוכנים.",
+            "cta": "למבחן הכללי",
+            "subject": None,
         }
     return {
         "id": "subjects",

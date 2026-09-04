@@ -23,6 +23,7 @@ from core.config import (
     COLORS,
     FONT_STEPS,
     ALL_SUBJECTS,
+    ELECTIVE_SUBJECTS,
     HOME_SUBJECTS,
     ICON_PATH,
     ICON_PNG_PATH,
@@ -44,6 +45,12 @@ from core.general_exam import (
 )
 from core.loader import load_subject
 from core.next_action import pick_next_action
+from core.learner_prefs import (
+    exam_goal,
+    onboarding_complete,
+    preferred_level,
+    selected_subjects as learner_subjects,
+)
 from core.meimad_exam import (
     SECTIONS,
     build_meimad_exam,
@@ -62,7 +69,9 @@ from core import nativeos, profiles, telemetry, updates
 from ui.toast import ToastHost
 from ui.fast import FastRow, FastScroll, fast_label
 from ui.screens.about import AboutScreen
+from ui.screens.ai_assistant import AIAssistantScreen
 from ui.screens.general_report import GeneralExamReportScreen
+from core.ai_engine import AIEngine
 from ui.screens.lesson import LessonScreen
 from ui.screens.mistakes import MistakesScreen
 from ui.screens.onboarding import OnboardingFrame
@@ -117,7 +126,23 @@ class StudyApp(ctk.CTk):
         i18n.set_lang(saved or textfix.guess_helper())
         from core import rtltext
 
-        rtltext.set_mode(str(self.storage.get_pref("hebrew_fix") or "auto"))
+        saved_he = str(self.storage.get_pref("hebrew_fix") or "auto")
+        # עדכון חד־פעמי: מצב «words» הישן הפך שאלות/ברכות במחשב לועזי/רוסי
+        self._hebrew_mode_fixed = False
+        if (
+            saved_he == "words"
+            and rtltext.windows_needs_hebrew_care()
+            and not self.storage.get_pref("rtl_no_flip_v1")
+        ):
+            saved_he = "auto"
+            self.storage.set_pref("hebrew_fix", "auto")
+            self.storage.set_pref("rtl_no_flip_v1", True)
+            self._hebrew_mode_fixed = True
+        mode = rtltext.normalize_saved_mode(saved_he)
+        if mode != saved_he:
+            self.storage.set_pref("hebrew_fix", mode)
+            self._hebrew_mode_fixed = True
+        rtltext.set_mode(mode)
         theme.apply_mode(self.storage.get_pref("appearance", "Light"))
         ADHD_CONFIG["font_delta"] = int(self.storage.get_pref("font_delta", 0) or 0)
 
@@ -134,6 +159,7 @@ class StudyApp(ctk.CTk):
         self.analytics = AnalyticsEngine()
         self.session_store = SessionStateManager()
         self.adaptive_engine = AdaptiveEngine(self.storage)
+        self.ai_engine = AIEngine(self.storage, self.adaptive_engine)
         self.srs = SpacedRepetition(self.storage)
         self.speaker = Speaker(enabled=bool(self.storage.get_pref("tts", False)))
         self.current_subject = None
@@ -150,6 +176,14 @@ class StudyApp(ctk.CTk):
 
         self._build_shell()
         self.toasts = ToastHost(self)
+        if getattr(self, "_hebrew_mode_fixed", False):
+            self.after(
+                900,
+                lambda: self.toasts.show(
+                    "תוקנה תצוגת עברית למחשב לועזי/רוסי — בלי היפוך משפטים.",
+                    kind="ok",
+                ),
+            )
         self._bind_keys()
         threading.Thread(target=self._preload_banks, daemon=True).start()
         self._choose_start_screen()
@@ -182,16 +216,49 @@ class StudyApp(ctk.CTk):
                     log.exception("window icon png")
 
     def _fit_to_screen(self):
-        """חלון שנכנס למסך. קודם הוא היה 1280x820 וחתך תוכן במסכים נמוכים."""
-        screen_w = self.winfo_screenwidth()
-        screen_h = self.winfo_screenheight()
-        width = min(1360, max(980, screen_w - 60))
-        height = min(860, max(560, screen_h - 120))
+        """חלון שנכנס למסך גם ב־1366×768, לפטופ קטן, ו־DPI גבוה."""
+        screen_w = int(self.winfo_screenwidth() or 1280)
+        screen_h = int(self.winfo_screenheight() or 720)
+        # שטח עבודה בלי שורת משימות (כשאפשר)
+        try:
+            import ctypes
+            from ctypes import wintypes
+
+            class RECT(ctypes.Structure):
+                _fields_ = [
+                    ("left", wintypes.LONG),
+                    ("top", wintypes.LONG),
+                    ("right", wintypes.LONG),
+                    ("bottom", wintypes.LONG),
+                ]
+
+            rect = RECT()
+            if ctypes.windll.user32.SystemParametersInfoW(0x0030, 0, ctypes.byref(rect), 0):
+                screen_w = max(640, int(rect.right - rect.left))
+                screen_h = max(480, int(rect.bottom - rect.top))
+        except Exception:
+            pass
+
+        min_w = 720 if screen_w < 1100 else 900 if screen_w < 1300 else 980
+        min_h = 480 if screen_h < 700 else 520 if screen_h < 800 else 540
+        min_w = min(min_w, max(640, screen_w - 24))
+        min_h = min(min_h, max(480, screen_h - 48))
+        self.minsize(min_w, min_h)
+
+        width = min(1360, max(min_w, screen_w - 48))
+        height = min(860, max(min_h, screen_h - 56))
+        width = min(width, screen_w)
+        height = min(height, screen_h)
         pos_x = max(0, (screen_w - width) // 2)
-        pos_y = max(0, (screen_h - height) // 2 - 20)
+        pos_y = max(0, (screen_h - height) // 2)
         self.geometry(f"{width}x{height}+{pos_x}+{pos_y}")
-        self.minsize(980, 540)
-        log.info("screen=%sx%s window=%sx%s", screen_w, screen_h, width, height)
+        try:
+            from ui.widgets import adapt_page_width
+
+            adapt_page_width(width)
+        except Exception:
+            pass
+        log.info("screen=%sx%s window=%sx%s min=%sx%s", screen_w, screen_h, width, height, min_w, min_h)
 
     def _on_crash(self, exc):
         try:
@@ -311,9 +378,19 @@ class StudyApp(ctk.CTk):
         self._nav("dashboard")
 
     def _active_screen(self):
-        for widget in self.content.winfo_children():
-            if isinstance(widget, (PracticeScreen, LessonScreen)):
-                return widget
+        host = getattr(self, "_practice_host", None)
+        roots = []
+        if host is not None:
+            roots.append(host)
+        roots.append(self.content)
+        for root in roots:
+            try:
+                kids = root.winfo_children()
+            except tk.TclError:
+                continue
+            for widget in kids:
+                if isinstance(widget, (PracticeScreen, LessonScreen)):
+                    return widget
         return None
 
     def _nav(self, key: str):
@@ -331,6 +408,8 @@ class StudyApp(ctk.CTk):
                 self._show_general_exam_hub()
             elif key == "mistakes":
                 self._show_mistakes()
+            elif key == "ai_assistant":
+                self._show_ai_assistant()
             elif key == "settings":
                 self._show_settings()
             elif key == "about":
@@ -427,12 +506,24 @@ class StudyApp(ctk.CTk):
             self._show_subject_hub(key)
 
     def _overall_level_he(self) -> str:
-        levels = [self.adaptive_engine.level_of(key) for key in ALL_SUBJECTS]
-        if "advanced" in levels:
-            return LEVEL_HE["advanced"]
-        if "intermediate" in levels:
-            return LEVEL_HE["intermediate"]
-        return LEVEL_HE["beginner"]
+        from core.adaptive_engine import LEVELS, normalize_level
+
+        levels = [
+            normalize_level(self.adaptive_engine.level_of(key))
+            for key in learner_subjects(self.storage)
+        ]
+        if not levels:
+            return LEVEL_HE.get(preferred_level(self.storage), "מתחיל")
+        best = max(levels, key=lambda lvl: LEVELS.index(lvl) if lvl in LEVELS else 0)
+        return LEVEL_HE.get(best, "מתחיל")
+
+    def _active_home_subjects(self) -> list[str]:
+        picked = set(learner_subjects(self.storage))
+        return [k for k in HOME_SUBJECTS if k in picked]
+
+    def _active_elective_subjects(self) -> list[str]:
+        picked = set(learner_subjects(self.storage))
+        return [k for k in ELECTIVE_SUBJECTS if k in picked]
 
     def _refresh_sidebar(self):
         student = self.storage.get_student() or {}
@@ -488,10 +579,17 @@ class StudyApp(ctk.CTk):
         )
 
     def _clear(self):
+        host = getattr(self, "_practice_host", None)
+        if host is not None:
+            try:
+                host.destroy()
+            except tk.TclError:
+                pass
+            self._practice_host = None
         try:
             children = list(self.content.winfo_children())
         except tk.TclError:
-            return
+            children = []
         for widget in children:
             try:
                 widget.destroy()
@@ -500,7 +598,12 @@ class StudyApp(ctk.CTk):
         scroll = getattr(self, "scroll", None)
         if scroll is not None:
             try:
+                scroll.pin_viewport(False)
                 scroll.to_top()
+                # מחזירים את אזור הגלילה אם תרגול הסתיר אותו
+                if not scroll.winfo_ismapped():
+                    self._chrome_state = None
+                    self._apply_chrome(refresh=True)
             except tk.TclError:
                 pass
 
@@ -533,12 +636,12 @@ class StudyApp(ctk.CTk):
             self.rail = ContextRail(self, on_weak=self._open_weak_from_rail)
             self._chrome_state = None
             self._apply_chrome(refresh=True)
-            self._nav(tab if tab in {"dashboard", "subjects", "exams", "meimad", "general_exam", "mistakes", "settings", "about", "studio"} else "dashboard")
+            self._nav(tab if tab in {"dashboard", "subjects", "exams", "meimad", "general_exam", "mistakes", "ai_assistant", "settings", "about", "studio"} else "dashboard")
         finally:
             self._rebuilding = False
 
     def _choose_start_screen(self):
-        if self.storage.has_profile() and self.storage.get_diagnostic():
+        if onboarding_complete(self.storage):
             self._show_chrome()
             self._show_dashboard()
         else:
@@ -771,9 +874,12 @@ class StudyApp(ctk.CTk):
         self._set_chrome(nav=False, rail=False)
         self._clear()
         self._set_window_title("הרשמה")
-        OnboardingFrame(self.content, storage=self.storage, on_done=self._after_onboarding).pack(
-            fill="both", expand=True
-        )
+        OnboardingFrame(
+            self.content,
+            storage=self.storage,
+            on_done=self._after_onboarding,
+            adaptive_engine=self.adaptive_engine,
+        ).pack(fill="both", expand=True)
 
     def _after_onboarding(self):
         self.active_tab = "dashboard"
@@ -828,9 +934,11 @@ class StudyApp(ctk.CTk):
         ).pack(fill="x", pady=(0, 10))
         self._pack_update_card(self.content)
 
-        weak = self._live_weak_subjects()
+        home_keys = self._active_home_subjects()
+        elective_keys = self._active_elective_subjects()
+        weak = [k for k in self._live_weak_subjects() if k in set(home_keys + elective_keys)]
         unpracticed = None
-        for key in HOME_SUBJECTS:
+        for key in home_keys + elective_keys:
             if key not in SUBJECTS or is_coming_soon(key):
                 continue
             info = mastery.get(key) or {}
@@ -844,6 +952,8 @@ class StudyApp(ctk.CTk):
             weak_keys=weak,
             unpracticed_key=unpracticed,
             review_batch=REVIEW_BATCH,
+            goal=exam_goal(self.storage),
+            preferred_subject=weak[0] if weak else unpracticed,
         )
         coach = self.adaptive_engine.evaluate()
         note = ""
@@ -853,12 +963,15 @@ class StudyApp(ctk.CTk):
         self._pack_next_action(nxt, note=note)
 
         heading(self.content, "המקצועות שלך", 15).pack(anchor="e", pady=(2, 4))
-        self._pack_subject_grid(mastery, HOME_SUBJECTS)
-        body(
-            self.content,
-            "בקרוב גם ערבית ועזרה ראשונה.",
-            muted=True,
-        ).pack(anchor="e", pady=(12, 4))
+        self._pack_subject_grid(mastery, home_keys or HOME_SUBJECTS)
+        if elective_keys:
+            heading(self.content, "מקצועות בחירה", 15).pack(anchor="e", pady=(14, 4))
+            body(
+                self.content,
+                "חשמל ואלקטרוניקה — לימוד, שיעורים ותרגול. לא נכנסים למבחן הכללי ולמימ״ד.",
+                muted=True,
+            ).pack(anchor="e", pady=(0, 4))
+            self._pack_subject_grid(mastery, elective_keys)
 
     def _pack_subject_grid(self, mastery: dict, keys: list[str]):
         grid = tk.Frame(self.content, bg=COLORS["bg"])
@@ -900,6 +1013,10 @@ class StudyApp(ctk.CTk):
             self._start_daily_review()
         elif kind == "mistakes":
             self._start_mistake_drill()
+        elif kind == "meimad":
+            self._nav("meimad")
+        elif kind == "general_exam":
+            self._nav("general_exam")
         elif kind == "weak":
             key = nxt.get("subject")
             if key:
@@ -957,6 +1074,85 @@ class StudyApp(ctk.CTk):
         self.storage.forget_mistakes()
         self._show_mistakes()
 
+    def _show_ai_assistant(self, question=None, subject: str = ""):
+        self.active_tab = "ai_assistant"
+        self._show_chrome()
+        self._clear()
+        self._set_window_title("עוזר בינה מלאכותית")
+        # אם נפתח מתרגול — שומרים הקשר שאלה
+        q = question
+        subj = subject or self.current_subject or ""
+        from_practice = False
+        if q is None and self.current_session and self.current_mode not in {
+            "mock", "final", "timed", "general", "meimad",
+        }:
+            try:
+                q = self.current_session.get_current_question()
+                subj = subj or self.current_subject or ""
+                from_practice = True
+            except Exception:
+                q = None
+        elif question is not None and self.current_session:
+            from_practice = True
+
+        def _back():
+            if from_practice and self.current_session:
+                self._render_practice()
+            else:
+                self._show_dashboard()
+
+        AIAssistantScreen(
+            self.content,
+            ai_engine=self.ai_engine,
+            on_start_practice=self._ai_start_adapted_practice,
+            on_back=_back,
+            initial_question=q,
+            subject=subj or "",
+        ).pack(fill="both", expand=True)
+
+    def _ai_start_adapted_practice(self, subject: str, topics: list | None, count: int = 6):
+        """מתחיל תרגול מותאם שהעוזר בחר — דרך האנליסט."""
+        subj = subject_key(subject or "") or (HOME_SUBJECTS[0] if HOME_SUBJECTS else "math")
+        topics = [str(t) for t in (topics or []) if t]
+        # מיקרו־שיעור קצר לפני החיזוק
+        try:
+            lesson = self.ai_engine.micro_lesson(subj, topics[0] if topics else "")
+            if lesson:
+                dialogs.info("לפני התרגול", lesson)
+        except Exception:
+            pass
+        pace = self.ai_engine.pacing(subj)
+        if pace.get("message"):
+            try:
+                self.toasts.show(pace["message"], kind="ok")
+            except Exception:
+                pass
+        want = max(4, min(int(count or 6), 10))
+        want = self.ai_engine.adjust_count(subj, "practice", want)
+        data = load_subject(subj) or {}
+        pool = self._clean_pool(data.get("questions") or [])
+        if not pool:
+            dialogs.info("מידע", "אין שאלות במקצוע שנבחר.")
+            return
+        questions, params = self.adaptive_engine.select_questions(
+            pool, subj, count=want, mode="practice", srs=self.srs,
+            prefer_topics=topics or None, topic_only=bool(topics),
+        )
+        if not questions:
+            dialogs.info("מידע", "לא נמצאו שאלות לחיזוק.")
+            return
+        self.current_subject = subj
+        self.current_mode = "practice"
+        self.current_session = ExamSession(
+            questions, mode="practice",
+            time_limit_sec=params.get("seconds"),
+            subject_key=subj,
+            topic=topics[0] if topics else None,
+            total_limit_sec=params.get("total_limit_sec"),
+        )
+        self.session_store.save(self.current_session.to_state(subj))
+        self._render_practice()
+
     def _show_settings(self):
         self.active_tab = "settings"
         self._show_chrome()
@@ -1008,20 +1204,70 @@ class StudyApp(ctk.CTk):
             helper_lang=i18n.get_lang(),
             on_hebrew_fix=self._set_hebrew_fix,
             hebrew_fix=str(self.storage.get_pref("hebrew_fix") or "auto"),
+            on_ollama=self._toggle_ollama,
+            ollama_on=bool(self.storage.get_pref("ollama_enabled", True)),
+            ollama_status=str(self.storage.get_pref("ollama_status") or ""),
+            on_ollama_check=self._check_ollama,
+            on_calm=self._toggle_calm_mode,
+            calm_on=bool(self.storage.get_pref("ai_calm_mode", False)),
         ).pack(fill="both", expand=True)
+
+    def _toggle_ollama(self):
+        from core import ollama_client
+
+        cur = bool(self.storage.get_pref("ollama_enabled", True))
+        self.storage.set_pref("ollama_enabled", not cur)
+        ollama_client.invalidate_health()
+        try:
+            self.toasts.show(
+                "מורה AI דולק." if not cur else "מורה AI כבוי.",
+                kind="ok",
+            )
+        except Exception:
+            pass
+        self._show_settings()
+
+    def _toggle_calm_mode(self):
+        cur = bool(self.storage.get_pref("ai_calm_mode", False))
+        self.storage.set_pref("ai_calm_mode", not cur)
+        try:
+            self.toasts.show(
+                "מצב רגוע דולק — סשנים קצרים יותר." if not cur else "מצב רגוע כבוי.",
+                kind="ok",
+            )
+        except Exception:
+            pass
+        self._show_settings()
+
+    def _check_ollama(self):
+        from core import dialogs, ollama_client
+
+        ollama_client.invalidate_health()
+        line = ollama_client.status_line(self.storage)
+        self.storage.set_pref("ollama_status", line)
+        dialogs.info("Ollama", line)
+        self._show_settings()
 
     def _set_hebrew_fix(self, mode: str):
         from core import rtltext
 
-        rtltext.set_mode(mode)
-        self.storage.set_pref("hebrew_fix", mode)
+        clean = rtltext.normalize_saved_mode(mode) if mode == "auto" else (mode or "auto")
+        if clean not in {"auto", "words", "letters", "off"}:
+            clean = "auto"
+        rtltext.set_mode(clean)
+        self.storage.set_pref("hebrew_fix", clean)
         try:
             self.sidebar.destroy()
         except Exception:
             pass
         self.sidebar = Sidebar(self, on_nav=self._nav)
         self._chrome_state = None
-        self._show_settings()
+        # רענון מלא כדי שהתיקון ייראה מיד בכל המסכים
+        try:
+            self._show_settings()
+            self.toasts.show("עברית עודכנה. אם עדיין הפוך — נסו «תקן עברית» או «תקן אותיות».", kind="ok")
+        except Exception:
+            self._show_settings()
 
     def _set_helper_lang(self, code: str):
         i18n.set_lang(code)
@@ -1060,6 +1306,15 @@ class StudyApp(ctk.CTk):
             "mock", "final", "timed", "general", "meimad",
         }:
             return
+        from core import security_shield
+
+        if not security_shield.studio_allowed():
+            dialogs.info(
+                "מחלקת ביטחון",
+                security_shield.student_warning()
+                or "חדר המפתח נחסם בגלל שינוי בקבצי התוכנה.",
+            )
+            return
         self.active_tab = "studio"
         self._set_chrome(nav=False, rail=False)
         try:
@@ -1083,6 +1338,7 @@ class StudyApp(ctk.CTk):
                 "tail": lambda: applog.read_recent(40),
                 "skip_diag": self._studio_skip_diag,
                 "unlock": self._studio_unlock,
+                "relock": self._studio_relock,
                 "update": lambda: self._run_update_check(manual=True) or "בדיקת העדכון התחילה.",
                 "report": self._export_parent_report,
                 "json": self._studio_open_json,
@@ -1095,6 +1351,16 @@ class StudyApp(ctk.CTk):
                 "restore": self._studio_restore_student,
                 "build": self._studio_build_windows,
                 "jump": self._show_subject_hub,
+                "integrity": self._studio_integrity,
+                "sec_log": self._studio_sec_log,
+                "seal": self._studio_seal,
+                "lock_desk": self._studio_lock_desk,
+                "analyst": self._studio_analyst_report,
+                "exam_ready": self._studio_exam_ready,
+                "ollama": self._studio_ollama_status,
+                "reset_levels": self._studio_reset_levels,
+                "health": self._studio_health,
+                "pytest": self._studio_pytest,
             },
         ).pack(fill="both", expand=True)
 
@@ -1102,6 +1368,10 @@ class StudyApp(ctk.CTk):
         self._studio_ok = bool(ok)
 
     def _leave_studio(self):
+        from core import studio_gate
+
+        studio_gate.force_lock_session_note()
+        self._studio_ok = False
         try:
             self.scroll.set_bg(COLORS["bg"])
             self.configure(fg_color=COLORS["bg"])
@@ -1109,6 +1379,156 @@ class StudyApp(ctk.CTk):
             pass
         self._show_chrome()
         self._show_dashboard()
+
+    def _studio_integrity(self):
+        from core import security_shield
+
+        return security_shield.status_report()
+
+    def _studio_sec_log(self):
+        from core import studio_gate
+
+        return studio_gate.events_text()
+
+    def _studio_seal(self):
+        from core import security_shield
+
+        path = security_shield.write_manifest()
+        return f"מניפסט שלמות נכתב:\n{path}\n\nצורפים אותו לחבילת ההתקנה בזמן build."
+
+    def _studio_lock_desk(self):
+        from core import studio_gate
+
+        self._studio_ok = False
+        studio_gate.force_lock_session_note()
+        self._open_studio()
+        return "חדר המפתח ננעל. צריך סיסמה מחדש."
+
+    def _studio_analyst_report(self):
+        lines = ["דוח אנליסט עמוק", "─" * 28]
+        snapshots = []
+        try:
+            for key in ALL_SUBJECTS:
+                snap = self.adaptive_engine.snapshot(key)
+                plan = self.adaptive_engine.action_plan(key)
+                # העשרה עם Ollama (רק כאן — לא בנתיב UI רגיל)
+                try:
+                    from core import ai_tutor
+
+                    plan = ai_tutor.enrichment_for_action_plan(
+                        key, plan, engine=self.adaptive_engine,
+                        storage=self.storage, use_llm=True,
+                    )
+                except Exception:
+                    pass
+                ready = self.adaptive_engine.exam_readiness(key)
+                name = subject_label(key)
+                snapshots.append(snap)
+                lines.append(
+                    f"{name}: {snap.get('level_he')} · "
+                    f"{int(snap.get('recent_accuracy') or 0)}% · "
+                    f"מוכנות מבחן {int((ready.get('score') or 0) * 100)}%"
+                )
+                weak = snap.get("weak_topics") or []
+                if weak:
+                    lines.append(f"  חלש: {' · '.join(weak[:3])}")
+                gap = (plan.get("silent_gap") or {})
+                if gap.get("root_gap"):
+                    lines.append(f"  פער שקט: {gap.get('root_gap')}")
+                    if gap.get("prerequisite"):
+                        lines.append(f"  חיזוק בסיס: {gap.get('prerequisite')}")
+                if plan.get("steps"):
+                    lines.append(f"  תוכנית: {plan['steps'][0]}")
+        except Exception as exc:
+            lines.append(f"שגיאה: {exc}")
+        deep = self.analytics.get_deep_report()
+        if deep:
+            lines.extend(["", deep])
+        # משגיח AI מקביל
+        try:
+            from core import ai_tutor
+
+            super_txt = ai_tutor.supervisor_report(
+                snapshots, deep_report=deep or "", storage=self.storage,
+            )
+            if super_txt:
+                lines.extend(["", "── משגיח AI (Ollama) ──", super_txt])
+        except Exception as exc:
+            lines.append(f"משגיח AI: {exc}")
+        return "\n".join(lines)
+
+    def _studio_exam_ready(self):
+        lines = ["תחזית מוכנות למבחן", "─" * 28]
+        try:
+            for key in ALL_SUBJECTS:
+                ready = self.adaptive_engine.exam_readiness(key)
+                lines.append(
+                    f"{subject_label(key)}: {ready.get('label')} "
+                    f"({int((ready.get('score') or 0) * 100)}%)"
+                )
+                if ready.get("advice"):
+                    lines.append(f"  {ready['advice']}")
+        except Exception as exc:
+            lines.append(str(exc))
+        return "\n".join(lines)
+
+    def _studio_ollama_status(self):
+        from core import ollama_client
+
+        ollama_client.invalidate_health()
+        line = ollama_client.status_line(self.storage)
+        self.storage.set_pref("ollama_status", line)
+        st = ollama_client.health(storage=self.storage, force=True)
+        models = " · ".join(st.get("models") or []) or "(אין מודלים)"
+        eng_status = {}
+        try:
+            eng_status = self.ai_engine.status()
+        except Exception:
+            eng_status = {}
+        return (
+            "סטטוס Ollama / מורה AI\n"
+            + "─" * 28 + "\n"
+            + line + "\n"
+            + f"כתובת: {st.get('url')}\n"
+            + f"מודל מוגדר: {st.get('model')}\n"
+            + f"מודלים מותקנים: {models}\n"
+            + f"זיכרון תלמיד: {eng_status.get('memory_items', 0)} רשומות\n"
+            + "תפריט: עוזר בינה מלאכותית (מעל הגדרות).\n"
+            + "כפתורים בתרגול: «תרגם לי» · «מורה AI» · «שאל עוזר» · סולם רמזים.\n"
+            + "שומר בחינה: במבחן נעולים כלי AI עד הדוח.\n"
+            + "דוח אנליסט עמוק מפעיל גם משגיח AI מקביל."
+        )
+
+    def _studio_reset_levels(self):
+        if not dialogs.confirm("איפוס רמות", "לאפס את רמות האנליסט בפרופיל הנוכחי?"):
+            return "בוטל."
+        self.storage.set("subject_levels", {})
+        self.adaptive_engine = AdaptiveEngine(self.storage)
+        self.ai_engine = AIEngine(self.storage, self.adaptive_engine)
+        return "רמות האנליסט אופסו. המקצועות יתחילו מחדש לפי היסטוריית התקדמות."
+
+    def _studio_relock(self):
+        self.storage.set_pref("studio_unlock_gates", False)
+        return "שערי המבחן חזרו לפעול לפי הכללים הרגילים."
+
+    def _studio_health(self):
+        from core import health
+
+        report = health.scan_and_repair()
+        return str((report or {}).get("message") or report)
+
+    def _studio_pytest(self):
+        import subprocess
+
+        from core.config import BASE_DIR
+
+        flags = int(getattr(subprocess, "CREATE_NEW_CONSOLE", 0) or 0)
+        subprocess.Popen(
+            [sys.executable, "-m", "unittest", "discover", "-s", "tests", "-q"],
+            cwd=BASE_DIR,
+            creationflags=flags,
+        )
+        return "נפתח חלון הרצת בדיקות."
 
     def _studio_editor(self):
         self.active_tab = "studio"
@@ -1260,7 +1680,10 @@ class StudyApp(ctk.CTk):
         )
         if not path:
             return "בוטל."
-        write_usb_zip(path)
+        try:
+            write_usb_zip(path)
+        except FileNotFoundError as exc:
+            return str(exc)
         nativeos.open_path(os.path.dirname(path))
         return (
             f"נשמרה חבילת הדיסק:\n{path}\n"
@@ -1664,6 +2087,7 @@ class StudyApp(ctk.CTk):
         self.analytics = AnalyticsEngine(db_path=files["user_stats"])
         self.session_store = SessionStateManager(path=files["session_state"])
         self.adaptive_engine = AdaptiveEngine(self.storage)
+        self.ai_engine = AIEngine(self.storage, self.adaptive_engine)
         self.srs = SpacedRepetition(self.storage)
         self.speaker.enabled = bool(self.storage.get_pref("tts", False))
         self.appearance = self.storage.get_pref("appearance", "Light") or "Light"
@@ -1974,6 +2398,13 @@ class StudyApp(ctk.CTk):
             pool, subject, mode=mode, srs=srs,
             prefer_topic=topic, prefer_topics=wanted or None, topic_only=topic_only,
         )
+        # מנוע AI: קיצור סשן לפי ADHD/חיפזון (בלי לגעת במבחנים)
+        if questions and mode in {"practice", "smart_practice", "guided", "compose"}:
+            capped = self.ai_engine.adjust_count(subject, mode, len(questions))
+            if capped < len(questions):
+                questions = questions[:capped]
+                params = dict(params)
+                params["count"] = len(questions)
         if not questions:
             dialogs.info("מידע", "אין עדיין שאלות במקצוע הזה.")
             return
@@ -2179,6 +2610,16 @@ class StudyApp(ctk.CTk):
             return
         self._show_dashboard()
 
+    def _similar_topic_drill(self, topic: str):
+        """אחרי טעות: סשן קצר על אותו נושא."""
+        subject = self.current_subject
+        if not subject:
+            return
+        topic = str(topic or "").strip()
+        if not topic:
+            return
+        self._start_mode(subject, "practice", topic=topic, topic_only=True)
+
     def _render_practice(self):
         self._clear()
         if not self.current_session:
@@ -2191,14 +2632,27 @@ class StudyApp(ctk.CTk):
         if self.current_mode != "general" and self.current_subject:
             level_he = LEVEL_HE.get(self.adaptive_engine.level_of(self.current_subject), "מתחיל")
         mode_he = {
-            "practice": "תרגול", "guided": "שיעור ותרגול", "compose": "יצור", "review": "חזרה",
+            "practice": "תרגול", "guided": "שיעור ותרגול", "compose": "כתיבה", "review": "חזרה",
             "mock": "מבחן דמה",
             "final": "מבחן אמיתי", "timed": "מבחן", "general": "מבחן כללי",
             "meimad": "מימ״ד",
         }.get(self.current_mode, "תרגול")
         self._set_window_title(subject_label(self.current_subject or ""), mode_he)
+
+        # תרגול מחוץ לגלילה — אחרת רווח ריק / גלילה שוברים את הסידור
+        scroll = getattr(self, "scroll", None)
+        if scroll is not None:
+            try:
+                scroll.pack_forget()
+            except tk.TclError:
+                pass
+        host = tk.Frame(self, bg=COLORS["bg"], highlightthickness=0)
+        self._practice_host = host
+        pad_left = 24
+        pad_right = 8 if not hide_nav else 24
+        host.pack(side="left", fill="both", expand=True, padx=(pad_left, pad_right), pady=16)
         PracticeScreen(
-            self.content,
+            host,
             session=self.current_session,
             on_back=self._practice_back,
             on_finished=self._show_results,
@@ -2209,6 +2663,11 @@ class StudyApp(ctk.CTk):
             level_he=level_he,
             on_report=self._report_question,
             subject_key=self.current_subject,
+            storage=self.storage,
+            on_similar_topic=self._similar_topic_drill,
+            on_ask_ai=None if self.current_mode in {"mock", "final", "timed", "general", "meimad"}
+            else (lambda q: self._show_ai_assistant(question=q, subject=self.current_subject or "")),
+            ai_engine=getattr(self, "ai_engine", None),
         ).pack(fill="both", expand=True)
 
     def _persist_answer(self, question, is_correct, elapsed, selected_index=-1):
@@ -2247,6 +2706,20 @@ class StudyApp(ctk.CTk):
         self.storage.record_focus_event(
             "answer_correct" if is_correct else "answer_attempt", {"count": 1, "topic": topic}
         )
+        # מנוע AI מערכתי: זיכרון + מיון טעות + אות קצב
+        try:
+            note = self.ai_engine.on_answer(
+                question,
+                is_correct=bool(is_correct),
+                time_sec=elapsed,
+                subject=subj,
+                mode=self.current_mode or "practice",
+            )
+            pace = (note or {}).get("pacing") or {}
+            if pace.get("rush") and not is_correct:
+                self._toast("לאט יותר", "נסו לקרוא עד הסוף לפני בחירה.", kind="warn")
+        except Exception:
+            pass
 
     def _restore_last_session(self):
         saved = self.session_store.load()
@@ -2356,6 +2829,17 @@ class StudyApp(ctk.CTk):
         self._set_window_title("תוצאות", subject_label(subj))
         meta = self._finish_meta(session)
         drill_mode = "compose" if self.current_mode == "compose" else "practice"
+        # סיכום AI אחרי סשן (גם אחרי מבחן — מותר)
+        try:
+            debrief = self.ai_engine.session_debrief(
+                subject=subj,
+                answers=list(session.user_answers or []),
+                mode=self.current_mode or "practice",
+            )
+            if debrief.get("message"):
+                self._toast(debrief.get("title") or "סיכום AI", debrief["message"][:180], kind="ok")
+        except Exception:
+            pass
         ResultsScreen(
             self.content, session=session, summary=self.analytics.get_summary(subject=subj),
             insight=self.analytics.get_insight_card(subject=subj),

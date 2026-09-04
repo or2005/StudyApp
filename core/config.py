@@ -20,7 +20,7 @@ ICON_PATH: Final[str] = os.path.join(ASSETS_DIR, "icon.ico")
 ICON_PNG_PATH: Final[str] = os.path.join(ASSETS_DIR, "icon.png")
 APP_TITLE: Final[str] = "StudyApp"
 APP_NAME: Final[str] = "StudyApp"
-VERSION: Final[str] = "4.9.0"
+VERSION: Final[str] = "5.0.0"
 FONT_FAMILY: Final[str] = "Segoe UI"
 
 DEVELOPER_NAME: Final[str] = "אור דדשב"
@@ -36,6 +36,16 @@ UPDATE_MANIFEST_URLS: Final[tuple[str, ...]] = (
 )
 # פינג אנונימי בהסכמה בלבד. אין שם / גיל / ת״ז.
 TELEMETRY_URL: Final[str] = "https://formsubmit.co/ajax/dadshaev@gmail.com"
+
+# מורה AI מקומי דרך Ollama (בלי מפתח API). אפשר לדרוס עם משתני סביבה:
+# STUDYAPP_OLLAMA_URL / STUDYAPP_OLLAMA_MODEL / STUDYAPP_OLLAMA_ENABLED / STUDYAPP_OLLAMA_TIMEOUT
+OLLAMA_BASE_URL: Final[str] = os.environ.get("STUDYAPP_OLLAMA_URL", "http://localhost:11434")
+OLLAMA_MODEL: Final[str] = os.environ.get("STUDYAPP_OLLAMA_MODEL", "qwen2.5:3b")
+OLLAMA_TIMEOUT_SEC: Final[float] = float(os.environ.get("STUDYAPP_OLLAMA_TIMEOUT", "120") or 120)
+OLLAMA_ENABLED_DEFAULT: Final[bool] = (
+    str(os.environ.get("STUDYAPP_OLLAMA_ENABLED", "1")).strip().lower()
+    not in {"0", "false", "off", "no"}
+)
 
 
 def copyright_he() -> str:
@@ -69,54 +79,54 @@ def rtl_paragraph(text: str) -> str:
 
 # ערכת הצבעים הפעילה. core/theme.py מחליף את התוכן במקום בעת מעבר בהיר/כהה.
 COLORS: dict[str, str] = {
-    "bg": "#F0F9F6",
-    "bg_dark": "#264A45",
+    "bg": "#F2F3F0",
+    "bg_dark": "#2A3834",
     "card_bg": "#FFFFFF",
-    "card_hover": "#E8F6F1",
-    "card_border": "#DCEAE4",
-    "shadow": "#C5D6D0",
-    "primary": "#0D9488",
-    "primary_hover": "#0F766E",
-    "accent": "#EA7A3A",
-    "success": "#16A34A",
-    "success_hover": "#15803D",
+    "card_hover": "#EBECE8",
+    "card_border": "#D8DBD4",
+    "shadow": "#C8CBC3",
+    "primary": "#3A6B5E",
+    "primary_hover": "#2F564C",
+    "accent": "#B86B45",
+    "success": "#3D8B5F",
+    "success_hover": "#327350",
     "success_text": "#FFFFFF",
-    "danger": "#E11D48",
-    "danger_hover": "#BE123C",
+    "danger": "#C24B5A",
+    "danger_hover": "#A33D4A",
     "danger_text": "#FFFFFF",
-    "streak": "#EA7A3A",
-    "hint": "#EA7A3A",
-    "text_main": "#143D38",
-    "text_muted": "#4F746E",
+    "streak": "#B86B45",
+    "hint": "#B86B45",
+    "text_main": "#1E2A28",
+    "text_muted": "#667572",
     "text_on_primary": "#FFFFFF",
-    "focus_bg": "#E8F6F1",
-    "banner": "#0F766E",
-    "banner_text": "#F0FDFA",
-    "banner_track": "#B7E4D8",
-    "banner_fill": "#0D9488",
-    "option_bg": "#F3FBFA",
-    "option_hover": "#D9F3EC",
-    "option_text": "#134E4A",
-    "option_border": "#C5E4DC",
-    "progress_track": "#D7EDE7",
-    "progress_fill": "#0D9488",
-    "scrollbar": "#E8F6F1",
-    "scrollbar_thumb": "#7AADA3",
+    "focus_bg": "#EBECE8",
+    "banner": "#2F564C",
+    "banner_text": "#F4F6F3",
+    "banner_track": "#D5DED9",
+    "banner_fill": "#3A6B5E",
+    "option_bg": "#F7F8F5",
+    "option_hover": "#E4E9E5",
+    "option_text": "#1E2A28",
+    "option_border": "#D0D6D1",
+    "progress_track": "#E0E5E1",
+    "progress_fill": "#3A6B5E",
+    "scrollbar": "#EEF0EC",
+    "scrollbar_thumb": "#9AA8A2",
     "input_bg": "#FFFFFF",
-    "input_fg": "#143D38",
-    "input_border": "#C5E4DC",
-    "sidebar_rule": "#D2E8E1",
-    "sidebar_bg": "#FFFFFF",
-    "sidebar_fg": "#143D38",
-    "sidebar_muted": "#4F746E",
-    "sidebar_hover": "#E8F6F1",
-    "sidebar_active": "#0D9488",
-    "gold": "#EA7A3A",
+    "input_fg": "#1E2A28",
+    "input_border": "#D0D6D1",
+    "sidebar_rule": "#E2E5DF",
+    "sidebar_bg": "#FAFBF9",
+    "sidebar_fg": "#1E2A28",
+    "sidebar_muted": "#6E7C78",
+    "sidebar_hover": "#EBECE8",
+    "sidebar_active": "#3A6B5E",
+    "gold": "#B86B45",
     "gold_text": "#FFFFFF",
-    "hero_bg": "#CFF5EA",
-    "hero_fg": "#143D38",
-    "hero_muted": "#0F766E",
-    "hairline": "#D2E8E1",
+    "hero_bg": "#FFFFFF",
+    "hero_fg": "#1E2A28",
+    "hero_muted": "#667572",
+    "hairline": "#D8DBD4",
 }
 
 
@@ -134,13 +144,13 @@ class ADHDConfig(TypedDict):
 
 ADHD_CONFIG: Final[ADHDConfig] = {
     "font_family": "Segoe UI",
-    "header_size": 28,
-    "title_size": 22,
-    "body_size": 17,
-    "button_radius": 16,
+    "header_size": 26,
+    "title_size": 20,
+    "body_size": 16,
+    "button_radius": 12,
     "animation_speed": 180,
-    "high_contrast": True,
-    "option_height": 66,
+    "high_contrast": False,
+    "option_height": 56,
     "font_delta": 0,
 }
 
@@ -154,28 +164,28 @@ class ModeInfo(TypedDict):
 SUBJECT_MODES: Final[dict[str, ModeInfo]] = {
     "read": {
         "name": "שיעור עיוני",
-        "desc": "מאגר שיעורים מלא לכל נושא במקצוע: תיאוריה, דוגמאות וסיכום.",
-        "color": "#0F9A8A",
+        "desc": "קוראים בקצב שלכם: תיאוריה, דוגמה וסיכום קצר.",
+        "color": "#3A6B5E",
     },
     "practice": {
         "name": "תרגול",
-        "desc": "תרגול מותאם לרמה, עם רמז והסבר אחרי כל תשובה. גם כשעונים נכון.",
-        "color": "#0D9488",
+        "desc": "שאלות לפי הרמה שלכם, עם הסבר אחרי כל תשובה.",
+        "color": "#3A6B5E",
     },
     "compose": {
-        "name": "יצור",
-        "desc": "כותבים מילה, מספר או משפט קצר. כל שאלה אומרת בדיוק מה לרשום.",
-        "color": "#C45A2A",
+        "name": "כתיבה",
+        "desc": "כותבים מילה, מספר או משפט. כל שאלה אומרת מה לרשום.",
+        "color": "#B86B45",
     },
     "mock": {
         "name": "מבחן דמה",
-        "desc": "הציון בסוף, בלי השפעה על הפרופיל. מספר השאלות והשעון לפי הרמה.",
-        "color": "#0EA5E9",
+        "desc": "הציון בסוף. בלי השפעה על הפרופיל.",
+        "color": "#4A7A8C",
     },
     "final": {
         "name": "מבחן אמיתי",
-        "desc": "נפתח אחרי 20 שאלות תרגול בדיוק 50%+. אורך וזמן לפי הרמה. אין חזרה אחורה.",
-        "color": "#7C3AED",
+        "desc": "נפתח אחרי תרגול מספיק. אורך וזמן לפי הרמה.",
+        "color": "#6B5A4A",
     },
 }
 
@@ -192,61 +202,61 @@ SUBJECTS: Final[dict[str, SubjectInfo]] = {
         "name": "לשון",
         "desc": "חלקי דיבר, תחביר, כתיב, פיסוק ושורשים.",
         "icon": "book",
-        "color": "#7C6BC4",
+        "color": "#6B5F8A",
     },
     "english": {
         "name": "אנגלית",
         "desc": "אוצר מילים, דקדוק והבנת הנקרא.",
         "icon": "translate",
-        "color": "#3B6FBF",
+        "color": "#4A6F8C",
     },
     "geography": {
         "name": "גאוגרפיה",
         "desc": "מדינות, ערים, יבשות ותופעות טבע.",
         "icon": "globe",
-        "color": "#3D8B5A",
+        "color": "#4A7A5A",
     },
     "history": {
         "name": "היסטוריה",
         "desc": "אירועים, תקופות ודמויות לאורך הזמן.",
         "icon": "scroll",
-        "color": "#C45A2A",
+        "color": "#A86B4A",
     },
     "civics": {
         "name": "אזרחות",
-        "desc": "דמוקרטיה, זכויות, מוסדות וחוק.",
+        "desc": "דמוקרטיה, רשויות, זכויות וחובות.",
         "icon": "landmark",
-        "color": "#2E7A9A",
-    },
-    "physics": {
-        "name": "פיזיקה",
-        "desc": "תנועה, כוחות, אנרגיה, חשמל וגלים.",
-        "icon": "atom",
-        "color": "#2A8A96",
+        "color": "#4A7A8C",
     },
     "chemistry": {
         "name": "כימיה",
-        "desc": "אטום, טבלה מחזורית, קשרים ותגובות.",
-        "icon": "beaker",
-        "color": "#C45A88",
+        "desc": "אטומים, תגובות, חומרים ונוסחאות.",
+        "icon": "flask",
+        "color": "#8A5A6A",
+    },
+    "physics": {
+        "name": "פיזיקה",
+        "desc": "כוחות, תנועה, אנרגיה וחשמל בסיסי.",
+        "icon": "atom",
+        "color": "#4A6A8C",
     },
     "math": {
         "name": "מתמטיקה",
-        "desc": "סדרות, אחוזים, יחס, היגיון ואנלוגיות.",
-        "icon": "calculator",
-        "color": "#C4841A",
+        "desc": "אלגברה, גאומטריה, אחוזים ופונקציות.",
+        "icon": "sigma",
+        "color": "#8A7040",
     },
-    "arabic": {
-        "name": "ערבית",
-        "desc": "ערבית בסיסית לדוברי עברית: ברכות, יום־יום ובית ספר.",
-        "icon": "chat",
-        "color": "#2E8B6A",
+    "electricity": {
+        "name": "חשמל",
+        "desc": "מעגלים, מתח, זרם והתנגדות.",
+        "icon": "bolt",
+        "color": "#8A7840",
     },
-    "first_aid": {
-        "name": "עזרה ראשונה",
-        "desc": "החייאה, דימום, כוויות, שבץ ועוד. חומר לימודי רחב.",
-        "icon": "plus",
-        "color": "#C0364A",
+    "electronics": {
+        "name": "אלקטרוניקה",
+        "desc": "רכיבים, אותות ומעגלים פעילים.",
+        "icon": "chip",
+        "color": "#5A6A8C",
     },
 }
 
@@ -263,12 +273,13 @@ HOME_SUBJECTS: Final[list[str]] = [
     "physics",
 ]
 
-# מקצועות בחירה: מופיעים במסך המקצועות, לא במבחן הכללי ולא במימ״ד.
-ELECTIVE_SUBJECTS: Final[list[str]] = ["arabic", "first_aid"]
+# מקצועות בחירה: מופיעים במסך הבית, לא במבחן הכללי ולא במימ״ד.
+ELECTIVE_SUBJECTS: Final[list[str]] = [
+    "electricity",
+    "electronics",
+]
 ALL_SUBJECTS: Final[list[str]] = [*HOME_SUBJECTS, *ELECTIVE_SUBJECTS]
-# עדיין מוצגים בבית, אבל מעומעמים ולא נפתחים.
-COMING_SOON_SUBJECTS: Final[frozenset[str]] = frozenset({"arabic", "first_aid"})
-
+COMING_SOON_SUBJECTS: Final[frozenset[str]] = frozenset()
 # פרקי מבחן מימ״ד (מאל"ו): עברית, אנגלית וחשבון.
 MEIMAD_SUBJECTS: Final[list[str]] = ["hebrew", "english", "math"]
 
@@ -291,9 +302,8 @@ def subject_key(value: str) -> str:
         "חשבון": "math",
         "לשון": "hebrew",
         "עברית": "hebrew",
-        "ערבית": "arabic",
-        "עזרה ראשונה": "first_aid",
-        "עזרהראשונה": "first_aid",
+        "חשמל": "electricity",
+        "אלקטרוניקה": "electronics",
     }
     if raw in aliases:
         return aliases[raw]

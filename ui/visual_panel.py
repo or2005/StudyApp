@@ -81,12 +81,6 @@ class VisualPanel(tk.Frame):
                 self, alt, size=11, muted=True, bg=self["bg"], wrap=self._max_width,
             ).pack(anchor="e", pady=(0, 4))
 
-        if self._mode == "question":
-            fast_label(
-                self, "ההמחשה עוזרת להבין. עדיין קוראים את השאלה.",
-                size=11, muted=True, bg=self["bg"], wrap=self._max_width,
-            ).pack(anchor="e")
-
     def _paint_image(self):
         if not self._img_label or not self._visual:
             return

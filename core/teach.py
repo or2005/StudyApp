@@ -27,7 +27,7 @@ _ALREADY_ASK = re.compile(
 _GENERIC_PREFIX = "מה מתאים כאן:"
 _COPULA_WORD = {"הוא": "מהו", "היא": "מהי", "הם": "מהם", "הן": "מהן"}
 _PCT = re.compile(
-    r"^(\d+(?:[.,]\d+)?)\s*%\s*מ[־\-]?\s*(\d+(?:[.,]\d+)?)\s*(?:הם|הן|הוא)?\s*\??$"
+    r"^(?:מהו|מהי)?\s*(\d+(?:[.,]\d+)?)\s*%\s*מ[־\-]?\s*(\d+(?:[.,]\d+)?)\s*(?:הם|הן|הוא|שווה)?\s*\??$"
 )
 _INVERTED_COP = re.compile(r"^מה (.+?) (הוא|היא|הם|הן)\s*\??$")
 _ZEH = re.compile(r"^(.+?)\s+זה\s*\??$")
@@ -130,39 +130,82 @@ def enrich_explanation(
     topic: str = "",
     subject: str = "",
 ) -> str:
-    """משלים הסבר קצר בהוראה אמיתית מהנושא, בלי מלל גנרי."""
+    """משלים הסבר קצר בעובדה מהנושא, בלי מלל גנרי."""
     from core.stem_fix import clean_student_text
 
-    exp = clean_student_text(explanation)
+    exp = _scrub_filler(clean_student_text(explanation))
     answer = str(correct or "").strip()
     guide = teaching(subject, topic, extra=exp)
-    rule = clean_student_text(guide.get("rule") or "")
-    how = clean_student_text((guide.get("how") or "").split("\n", 1)[0])
-    mistake = clean_student_text(guide.get("mistakes") or "")
+    rule = _scrub_filler(clean_student_text(guide.get("rule") or ""))
 
-    # מסירים שאריות גנריות שחוזרות על עצמן במאגר
-    for junk in (
-        "סיבה, אירוע, תוצאה. אחר כך התאריך של משפט נכון בהיסטוריה, ניסוח עדין בהיסטוריה.",
-        "סיבה, אירוע, תוצאה.",
-        "ניסוח עדין בהיסטוריה.",
-        "משפט נכון בהיסטוריה,",
-    ):
-        exp = exp.replace(junk, " ").strip()
-    exp = re.sub(r"\s{2,}", " ", exp).strip(" .")
+    if answer:
+        # מסירים כפילות «התשובה הנכונה היא …» אם כבר מופיעה
+        exp = re.sub(
+            rf"^התשובה הנכונה(?: היא)?\s*[«\"]?{re.escape(answer)}[»\"]?\s*\.?\s*",
+            "",
+            exp,
+        ).strip()
 
     parts: list[str] = []
-    if answer and answer not in exp[:120]:
+    if answer:
         parts.append(f"התשובה הנכונה היא «{answer}».")
     if exp:
         parts.append(exp)
     elif rule:
         parts.append(rule)
-    if how and how[:20] not in " ".join(parts):
-        parts.append(f"איך לחשוב: {how}")
-    if mistake and mistake[:20] not in " ".join(parts) and len(" ".join(parts)) < 120:
-        parts.append(f"טעות נפוצה: {mistake}")
+    elif topic:
+        parts.append(f"זה שייך לנושא «{topic}».")
     text = " ".join(parts).strip()
-    return text or "קראו שוב את השאלה, סמנו מילה אחת חשובה, ואז בחרו."
+    return text or (f"התשובה הנכונה היא «{answer}»." if answer else "")
+
+
+_FILLER_PATTERNS = (
+    re.compile(
+        r"קראו שוב את השאלה(?:,|\s)+בדקו יחידות(?:,|\s)+ופסלו מה שלא מתאים\.?",
+        re.I,
+    ),
+    re.compile(
+        r"אם טעיתם,?\s*חזרו לשיעור[^.]*(?:\.|$)",
+        re.I,
+    ),
+    re.compile(
+        r"פסלו מה שלא מתאים להגדרה,?\s*ובדקו מה בדיוק נשאל\.?",
+        re.I,
+    ),
+    re.compile(
+        r"קראו שוב את השאלה,?\s*סמנו מילה אחת חשובה,?\s*ואז בחרו\.?",
+        re.I,
+    ),
+    re.compile(
+        r"סיבה,?\s*אירוע,?\s*תוצאה\.?(?:\s*אחר כך התאריך של[^.]*\.?)?",
+        re.I,
+    ),
+    re.compile(r"ניסוח עדין בהיסטוריה\.?", re.I),
+    re.compile(r"משפט נכון בהיסטוריה,?", re.I),
+)
+
+
+def _scrub_filler(text: str) -> str:
+    raw = str(text or "").strip()
+    for pat in _FILLER_PATTERNS:
+        raw = pat.sub(" ", raw)
+    raw = re.sub(r"\s{2,}", " ", raw)
+    return raw.strip(" .;,")
+
+
+_THINK: dict[str, str] = {
+    "history": "שנה שייכת לאירוע. אל תערבבו מלחמות או תקופות.",
+    "civics": "הגדירו את המושג, ואז שאלו איזו רשות בישראל קשורה.",
+    "geography": "מקום במפה + אקלים או משאב. שם בלי הקשר הוא מסיח.",
+    "physics": "נתון → מבוקש → יחידות. אחר כך נוסחה.",
+    "chemistry": "מה משתנה ומה נשמר. אטום ומולקולה אינם אותו דבר.",
+    "math": "נתון ומבוקש, פעולה אחת, בדיקת היגיון.",
+    "hebrew": "סמנו את המילה הקובעת במשפט, ורק אז בחרו.",
+    "english": "רמז זמן או מבנה במשפט. בלי תרגום מילה־מילה.",
+    "biology": "תהליך ותוצאה בגוף או בתא.",
+    "arabic": "שורש מול צורה. קראו את המשפט בקול.",
+    "first_aid": "בטיחות → הכרה → קריאה לעזרה → טיפול.",
+}
 
 
 def teach_after_answer(
@@ -171,8 +214,8 @@ def teach_after_answer(
     is_correct: bool,
     subject: str = "",
 ) -> dict[str, str]:
-    """בלוקים ברורים אחרי תשובה: למה, איך לחשוב, ומה להיזהר."""
-    from core.stem_fix import clean_student_text
+    """בלוקים קצרים אחרי תשובה: מה נכון, איך, ושימו לב רק בטעות."""
+    from core.stem_fix import scrub_explanation
 
     q = question or {}
     opts = q.get("options") or []
@@ -182,185 +225,130 @@ def teach_after_answer(
         correct = str(opts[idx])
     subj = subject_key(subject or q.get("subject") or "")
     topic = str(q.get("topic") or "")
-    stem = str(q.get("question") or "")
+    stem = clarify_stem(q) if q else ""
     guide = teaching(subj, topic, extra=stem)
     keep_ctx = f"{stem} {correct} {topic}"
-    body = clean_student_text(q.get("explanation") or "", keep_years_from=keep_ctx)
-    for junk in (
-        "סיבה, אירוע, תוצאה. אחר כך התאריך של משפט נכון בהיסטוריה, ניסוח עדין בהיסטוריה.",
-        "סיבה, אירוע, תוצאה.",
-        "ניסוח עדין בהיסטוריה.",
-    ):
-        body = body.replace(junk, " ")
-    body = re.sub(r"\s{2,}", " ", body).strip(" .")
 
-    why_parts: list[str] = []
+    body = scrub_explanation(
+        q.get("explanation") or "",
+        keep_years_from=keep_ctx,
+        stem=stem,
+    )
     if correct:
-        why_parts.append(f"התשובה הנכונה: «{correct}».")
-    if body:
-        # אם ההסבר רק חוזר על התשובה — מוסיפים כלל מהנושא
-        if correct and correct in body and len(body) < len(correct) + 28:
-            rule = clean_student_text(guide.get("rule") or "", keep_years_from=keep_ctx)
-            why_parts.append(body)
-            if rule and rule[:20] not in body:
-                why_parts.append(rule)
-        else:
-            why_parts.append(body)
-    else:
-        rule = clean_student_text(guide.get("rule") or "", keep_years_from=keep_ctx)
-        if rule:
-            why_parts.append(rule)
-        elif topic:
-            why_parts.append(f"זה שייך לנושא «{topic}».")
+        body = re.sub(
+            rf"^(?:התשובה הנכונה(?: היא)?\s*)?[«\"]?{re.escape(correct)}[»\"]?\s*[\.:]?\s*",
+            "",
+            body,
+        ).strip()
+        body = body.lstrip("«»\"' ")
 
-    how = _how_to_think(subj, topic=topic, stem=stem, correct=correct, guide=guide)
-    watch = _watch_tip(subj, guide=guide, is_correct=is_correct, correct=correct)
-    picture = _picture_tip(q, correct=correct, topic=topic)
+    why = _compact_why(correct=correct, body=body, guide=guide, topic=topic, keep_ctx=keep_ctx, stem=stem)
+    how = _how_line(subj, stem=stem, topic=topic)
+    if is_correct and len(why) >= 60:
+        how = ""
+    watch = ""
+    cta = ""
+    next_hint = ""
+    if not is_correct:
+        watch = _watch_line(subj, stem=stem, topic=topic, guide=guide)
+        if not how:
+            how = _THINK.get(subj, "קראו פעם אחת, סמנו מילה חשובה, ואז בחרו.")
+        if topic:
+            next_hint = f"עכשיו שאלה דומה על «{topic}» — כדי שהטעות לא תישאר."
+            cta = "שאלה דומה על אותו נושא"
+        else:
+            next_hint = "עכשיו עוד שאלה דומה, בלי לדלג על ההסבר."
+            cta = "שאלה דומה"
 
     return {
-        "status": "נכון. כל הכבוד." if is_correct else "לא מדויק. קוראים לאט וממשיכים.",
-        "why": " ".join(why_parts).strip(),
+        "status": "נכון. כל הכבוד." if is_correct else "לא מדויק. קוראים את ההסבר, מבינים, ורק אז ממשיכים.",
+        "why": why,
         "how": how,
         "watch": watch,
-        "picture": picture,
+        "next_hint": next_hint,
+        "cta": cta,
+        "picture": "",
     }
 
 
-_THINK: dict[str, str] = {
-    "history": (
-        "חשבו בשרשרת: מי פעל, באיזו תקופה, ומה השתנה אחרי כן. "
-        "אם מופיעה שנה, בדקו שהיא מתאימה לאירוע ולא למושג כללי."
-    ),
-    "civics": (
-        "הגדירו את המושג במשפט, ואז שאלו איזו רשות או זכות קשורה בישראל. "
-        "אל תערבבו כנסת עם ממשלה."
-    ),
-    "geography": (
-        "שימו את המקום במפה בראש: אקלים, משאב, והשפעה על אנשים. "
-        "שם בלי הקשר כמעט תמיד מסיח."
-    ),
-    "physics": (
-        "כתבו מה נתון ומה מחפשים, בדקו יחידות וכיוון, ורק אז בחרו נוסחה. "
-        "מילה מוכרת בשאלה אינה התשובה."
-    ),
-    "chemistry": (
-        "שאלו מה היחידה (אטום, מולקולה, יון), מה משתנה ומה נשמר. "
-        "אחר כך חברו לדוגמה מהמטבח או מהמעבדה."
-    ),
-    "math": (
-        "רשמו נתון ומבוקש, בחרו פעולה אחת, ובדקו אם התוצאה הגיונית. "
-        "אחוז ומספר אינם אותו דבר."
-    ),
-    "hebrew": (
-        "קראו את המשפט בקול, סמנו את המילה הקובעת, ורק אז בחרו. "
-        "צליל דומה אינו כתיב נכון."
-    ),
-    "english": (
-        "סמנו רמז זמן או מבנה במשפט באנגלית, בלי לתרגם מילה־מילה. "
-        "yesterday לא הולך עם present פשוט."
-    ),
-    "biology": (
-        "שאלו מה התהליך בגוף או בתא, ומה התוצאה. "
-        "שם של איבר בלי תפקיד הוא מסיח."
-    ),
-    "arabic": (
-        "הבדילו שורש מצורה, ואז קראו את המשפט בקול לפני הבחירה."
-    ),
-    "first_aid": (
-        "סדר פעולה: בטיחות, בדיקת הכרה, קריאה לעזרה, ואז טיפול לפי ההנחיה. "
-        "לא ממציאים תרופות."
-    ),
-}
+def _how_line(subject: str, *, stem: str, topic: str) -> str:
+    blob = f"{stem} {topic}"
+    if re.search(r"תואר|שם התואר", blob):
+        return "שם תואר מתאר שם עצם: בית גדול → גדול."
+    if re.search(r"שם עצם", blob) and "תואר" not in blob:
+        return "שם עצם הוא אדם, דבר או רעיון."
+    if re.search(r"ניגוד|הפך|antonym", blob, re.I):
+        return "מחפשים מילה הפוכה במשמעות, לא דומה."
+    if re.search(r"נרדפת|synonym", blob, re.I):
+        return "מחפשים מילה קרובה במשמעות."
+    if re.search(r"מלחמת העולם|הסתיימה ב", blob):
+        return "שימו לב איזו מלחמה נשאלת, ואל תערבבו 1918 עם 1945."
+    return _THINK.get(subject, "קראו פעם אחת, סמנו מילה חשובה, ואז בחרו.")
 
 
-def _how_to_think(
-    subject: str,
+def _watch_line(subject: str, *, stem: str, topic: str, guide: dict[str, str]) -> str:
+    blob = f"{stem} {topic}"
+    if re.search(r"תואר|שם התואר", blob):
+        return "אל תבלבלו שם תואר עם שם עצם."
+    if re.search(r"ניגוד|הפך", blob):
+        return "מילה דומה אינה ניגוד."
+    from core.stem_fix import scrub_explanation
+
+    watch = scrub_explanation(guide.get("mistakes") or "", stem=stem)
+    if len(watch) > 100:
+        watch = first_sentence(watch, limit=100)
+    # אם הטעות הגנרית על כתיב בשאלת לשון אחרת — מדלגים
+    if "צליל דומה" in watch and "תואר" in blob:
+        return "אל תבלבלו שם תואר עם שם עצם."
+    return watch
+
+
+def _compact_why(
     *,
+    correct: str,
+    body: str,
+    guide: dict[str, str],
     topic: str,
-    stem: str,
-    correct: str,
-    guide: dict[str, str],
+    keep_ctx: str,
+    stem: str = "",
 ) -> str:
-    from core.stem_fix import clean_student_text
+    from core.stem_fix import scrub_explanation
 
-    base = _THINK.get(subject) or (
-        "קראו פעם אחת בלי לענות, סמנו מילה אחת חשובה, ורק אז בחרו."
-    )
-    # דוגמה קצרה מהשאלה עצמה — השראה לתלמיד
-    example = ""
-    if correct and stem:
-        short_stem = first_sentence(stem, limit=72).rstrip("?.!")
-        example = f" כאן: בשאלה על «{short_stem}» מחפשים משהו כמו «{correct}»."
-    elif correct:
-        example = f" שמרו דוגמה: «{correct}»."
-    # משלבים לכל היותר משפט שיטה אחד מהמדריך, בלי מספור
-    steps = [ln.strip(" .") for ln in str(guide.get("how") or "").split("\n") if ln.strip()]
-    steps = [re.sub(r"^\d+\.\s*", "", s) for s in steps]
-    tip = clean_student_text(steps[0]) if steps else ""
-    if tip and (len(tip) < 12 or tip[:24] in base):
-        tip = ""
-    parts = [base]
-    if tip:
-        parts.append(tip)
-    if example:
-        parts.append(example.strip())
-    text = ". ".join(p.strip(" .") for p in parts if p).strip()
-    if text and not text.endswith((".", "?", "!")):
-        text += "."
-    return clean_student_text(text)
-
-
-def _watch_tip(
-    subject: str,
-    *,
-    guide: dict[str, str],
-    is_correct: bool,
-    correct: str,
-) -> str:
-    from core.stem_fix import clean_student_text
-
-    mistakes = clean_student_text(guide.get("mistakes") or "")
-    recap = clean_student_text(guide.get("recap") or "")
-    if not is_correct:
-        parts = [p for p in (mistakes, recap) if p]
-        return " ".join(parts).strip()
-    # גם אחרי תשובה נכונה: משפט לקיחה הביתה
-    if recap:
-        return recap
+    fact = body
+    if not fact:
+        fact = scrub_explanation(guide.get("rule") or "", keep_years_from=keep_ctx, stem=stem)
+    if fact and len(fact) > 160:
+        fact = first_sentence(fact, limit=160)
+    parts: list[str] = []
     if correct:
-        return f"חזרו בקול על «{correct}» פעם אחת, כדי שהרעיון יישאר גם בלי האפשרויות."
-    return mistakes
+        parts.append(f"התשובה: «{correct}».")
+    if fact:
+        parts.append(fact)
+    elif topic:
+        parts.append(f"שייך לנושא «{topic}».")
+    return " ".join(parts).strip()
 
 
-def _picture_tip(question: dict[str, Any], *, correct: str, topic: str) -> str:
-    from core.stem_fix import clean_student_text
-
-    try:
-        from core.illustrations.schema import get_visual
-
-        visual = get_visual(question)
-    except Exception:
-        visual = None
-    if not visual:
-        return ""
-    title = clean_student_text(visual.get("title") or topic or "המחשה")
-    cap = clean_student_text(
-        visual.get("reveal_note") or visual.get("caption") or ""
-    )
-    if correct and cap:
-        return (
-            f"האיור «{title}»: {cap} "
-            f"אמרו בקול משפט שמחבר את התמונה לתשובה «{correct}». כך זוכרים גם בלי לראות שוב."
-        )
-    if cap:
-        return (
-            f"האיור «{title}»: {cap} "
-            "השתמשו בו כעוגן זיכרון, לא במקום לקרוא את השאלה."
-        )
-    return (
-        f"האיור «{title}» מזכיר את הרעיון המרכזי. "
-        "תארו בקול מה רואים, ואז חברו לתשובה."
-    )
+def needs_task_prompt(question: dict[str, Any] | None) -> bool:
+    """מציגים «מה השאלה מבקשת» רק כשהגזע עצמו לא מסביר."""
+    q = question or {}
+    kind = str(q.get("kind") or "")
+    if kind in {"compose", "tutor", "estimate", "analogy", "family", "headline", "passage"}:
+        return True
+    if q.get("passage") or q.get("compose"):
+        return True
+    stem = clarify_stem(q)
+    if re.search(
+        r"^(?:מה |מי |מתי |כמה |איזה|איזו|איפה|למה |השלימו|בחרו|Choose|What |The )",
+        stem,
+        re.I,
+    ):
+        return False
+    if any(tok in stem for tok in ("ניגוד", "נרדפת", "הפך של", "___", "____")):
+        return False
+    if len(stem) < 24:
+        return True
+    return False
 
 
 def display_explanation(question: dict[str, Any] | None, subject: str = "") -> str:
@@ -629,19 +617,22 @@ def _rewrite_stem(stem: str) -> str:
 
 def clarify_stem(question: dict[str, Any] | None) -> str:
     """מרחיב ניסוח קצר או מקוטע, בלי לחשוף תשובה. בטוח להריץ פעמיים."""
-    from core.stem_fix import polish_stem
+    from core.stem_fix import align_stem_to_answer, is_vague_stem, polish_stem
 
     raw = str((question or {}).get("question") or "").strip()
     if not raw:
         return ""
     # קודם ניקוי מקפים / «מי היה בידוד» וכו׳ — גם אם כבר נשמר במאגר
     stem = polish_stem(raw, question)
+    if is_vague_stem(stem) or stem.startswith("איזו אפשרות נכונה"):
+        stem = align_stem_to_answer(stem, question)
+        stem = polish_stem(stem, question)
     if stem.startswith((
         "איזו מילה ", "באיזה זמן ", "מה צורת ", "מה המשמעות של ", "כמה הם ",
         "למה משמש", "את מה מתאר", "מה היה ", "מה הייתה ", "מה היו ",
         "מה פירוש ", "לאיזה שורש ", "מהו חלקי הדיבר",
         "השלימו את החסר", "מה עושה ", "מה מודד ", "מה מייצגת ", "מה אומר ",
-        "איזו אפשרות נכונה",
+        "מהי יחידת ", "איך מסווגים ", "איזה ים ", "באיזו שנה ",
     )):
         return stem if stem.endswith("?") or len(stem) > 24 else (stem if stem.endswith("?") else f"{stem.rstrip('?')}?")
     # «מי היה» רק לדמויות — אחרת polish_stem כבר תיקן
@@ -704,7 +695,9 @@ def task_prompt(question: dict[str, Any] | None) -> str:
 
 def topic_label(topic: str, subject: str = "") -> str:
     """כותרת נושא לתלמיד. בלי שורה אנגלית גולמית באמצע מסך עברי."""
-    raw = str(topic or "").strip() or "תרגול"
+    from core.stem_fix import clean_topic_label
+
+    raw = clean_topic_label(str(topic or "").strip() or "תרגול")
     if re.search(r"[\u0590-\u05FF]", raw):
         return raw
     key = subject_key(subject)

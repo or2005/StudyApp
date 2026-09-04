@@ -21,7 +21,7 @@ from core.exam_engine import ExamSession
 class ComposeModeTests(unittest.TestCase):
     def test_mode_is_listed(self):
         self.assertIn("compose", SUBJECT_MODES)
-        self.assertIn("יצור", SUBJECT_MODES["compose"]["name"])
+        self.assertIn("כתיבה", SUBJECT_MODES["compose"]["name"])
 
     def test_normalize_ignores_nikud_and_finals(self):
         self.assertEqual(normalize_answer("חברה"), normalize_answer("חברָה"))

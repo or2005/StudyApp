@@ -175,14 +175,16 @@ class AdaptiveEngineTests(unittest.TestCase):
         return pool
 
     def test_new_subject_starts_beginner(self):
-        self.assertEqual(self.engine.level_of("civics"), "beginner")
+        self.assertEqual(self.engine.level_of("civics"), "starter")
 
     def test_success_promotes_beginner_to_intermediate(self):
+        event = None
         for _ in range(8):
-            event = self.engine.observe("civics", True, "Easy")
-        self.assertEqual(self.engine.level_of("civics"), "intermediate")
+            event = self.engine.observe("civics", True, "Easy") or event
+        self.assertEqual(self.engine.level_of("civics"), "easy")
+        self.assertIsNotNone(event)
         self.assertEqual(event["kind"], "promote")
-        self.assertEqual(event["to"], "intermediate")
+        self.assertEqual(event["to"], "easy")
 
     def test_beginner_mix_avoids_hard(self):
         from core.adaptive_engine import mix_for, pick_by_mix, normalize_difficulty
@@ -221,7 +223,7 @@ class AdaptiveEngineTests(unittest.TestCase):
 
         for level in LEVELS:
             count = session_params(level, "practice")["count"]
-            self.assertGreaterEqual(count, 15, f"{level} practice={count}")
+            self.assertGreaterEqual(count, 12, f"{level} practice={count}")
 
     def test_short_topic_practice_fills_to_session_size(self):
         pool = []
@@ -231,7 +233,7 @@ class AdaptiveEngineTests(unittest.TestCase):
             for i in range(n):
                 pool.append({"id": f"{diff}-{i}", "topic": "אחר", "difficulty": diff, "question": diff})
         picked, params = self.engine.select_questions(pool, "civics", mode="practice", prefer_topic="נושא קצר")
-        self.assertGreaterEqual(len(picked), 15)
+        self.assertGreaterEqual(len(picked), 12)
         self.assertEqual(sum(1 for q in picked if q["topic"] == "נושא קצר"), 5)
         self.assertEqual(params["count"], len(picked))
 
@@ -309,14 +311,17 @@ class AdaptiveEngineTests(unittest.TestCase):
         for i in range(8):
             event = self.engine.observe("history", i != 3, "Easy", time_sec=1.1)
         self.assertIsNone(event)
-        self.assertEqual(self.engine.level_of("history"), "beginner")
+        self.assertEqual(self.engine.level_of("history"), "starter")
 
     def test_easy_only_success_does_not_skip_to_advanced(self):
         for _ in range(8):
             self.engine.observe("physics", True, "Easy")
+        self.assertEqual(self.engine.level_of("physics"), "easy")
+        for _ in range(10):
+            self.engine.observe("physics", True, "Easy")
         self.assertEqual(self.engine.level_of("physics"), "intermediate")
         event = None
-        for _ in range(12):
+        for _ in range(14):
             event = self.engine.observe("physics", True, "Easy")
         self.assertIsNone(event)
         self.assertEqual(self.engine.level_of("physics"), "intermediate")
@@ -324,10 +329,13 @@ class AdaptiveEngineTests(unittest.TestCase):
     def test_medium_mastery_promotes_to_advanced(self):
         for _ in range(8):
             self.engine.observe("chemistry", True, "Easy")
+        self.assertEqual(self.engine.level_of("chemistry"), "easy")
+        for _ in range(10):
+            self.engine.observe("chemistry", True, "Medium")
         self.assertEqual(self.engine.level_of("chemistry"), "intermediate")
         event = None
-        for _ in range(10):
-            event = self.engine.observe("chemistry", True, "Medium")
+        for _ in range(12):
+            event = self.engine.observe("chemistry", True, "Medium") or event
         self.assertIsNotNone(event)
         self.assertEqual(event["kind"], "promote")
         self.assertEqual(self.engine.level_of("chemistry"), "advanced")
@@ -335,13 +343,16 @@ class AdaptiveEngineTests(unittest.TestCase):
     def test_sustained_failure_demotes_intermediate(self):
         for _ in range(8):
             self.engine.observe("english", True, "Easy")
+        self.assertEqual(self.engine.level_of("english"), "easy")
+        for _ in range(10):
+            self.engine.observe("english", True, "Medium")
         self.assertEqual(self.engine.level_of("english"), "intermediate")
         event = None
         for _ in range(8):
-            event = self.engine.observe("english", False, "Medium")
+            event = self.engine.observe("english", False, "Medium") or event
         self.assertIsNotNone(event)
         self.assertEqual(event["kind"], "demote")
-        self.assertEqual(self.engine.level_of("english"), "beginner")
+        self.assertEqual(self.engine.level_of("english"), "easy")
 
     def test_evaluate_names_the_weak_subject(self):
         for _ in range(6):

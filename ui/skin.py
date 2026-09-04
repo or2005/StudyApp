@@ -39,8 +39,8 @@ def _rounded_bytes(w: int, h: int, radius: int, fill: str, shadow: bool) -> byte
     img = Image.new("RGBA", (w * s, h * s), (0, 0, 0, 0))
     if shadow:
         shade = ImageDraw.Draw(img)
-        shade.rounded_rectangle((4 * s, 5 * s, w * s - 1, h * s - 1), radius=radius * s, fill=(20, 45, 40, 38))
-        box = (0, 0, w * s - 6 * s, h * s - 7 * s)
+        shade.rounded_rectangle((3 * s, 4 * s, w * s - 1, h * s - 1), radius=radius * s, fill=(30, 40, 36, 28))
+        box = (0, 0, w * s - 4 * s, h * s - 5 * s)
     else:
         box = (0, 0, w * s - 1, h * s - 1)
     draw = ImageDraw.Draw(img)
@@ -58,7 +58,7 @@ def _pill_bytes(w: int, h: int, fill: str, outline: str) -> bytes:
     s = 2
     img = Image.new("RGBA", (w * s, h * s), (0, 0, 0, 0))
     draw = ImageDraw.Draw(img)
-    radius = max(8, h // 2) * s
+    radius = max(8, min(14, h // 3)) * s
     if outline:
         draw.rounded_rectangle(
             (1 * s, 1 * s, w * s - 2 * s, h * s - 2 * s),

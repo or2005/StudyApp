@@ -17,15 +17,43 @@ _LESSON_NUM_TITLE = re.compile(r"^\s*(\d+)\s*[\.\)]\s*")
 _LESSON_NUM_ID = re.compile(r"(\d+)\s*$")
 _DIFF_ORDER = {"Easy": 0, "Medium": 1, "Hard": 2}
 
-LEVELS = ("beginner", "intermediate", "advanced")
-LEVEL_HE = {"beginner": "מתחיל", "intermediate": "בינוני", "advanced": "מתקדם"}
-LEVEL_EMOJI = {"beginner": "🌱", "intermediate": "📈", "advanced": "🚀"}
+LEVELS = ("starter", "easy", "intermediate", "advanced", "elite")
+LEVEL_HE = {
+    "starter": "מתחיל",
+    "easy": "קל",
+    "intermediate": "בינוני",
+    "advanced": "מתקדם",
+    "elite": "רמה גבוהה",
+}
+LEVEL_EMOJI = {
+    "starter": "",
+    "easy": "",
+    "intermediate": "",
+    "advanced": "",
+    "elite": "",
+}
 DIFFICULTY_HE = {"Easy": "קל", "Medium": "בינוני", "Hard": "קשה"}
+
+# פרופילים / אבחונים ישנים (3 רמות) → 5 רמות
+_LEGACY_LEVEL = {
+    "beginner": "starter",
+    "starter": "starter",
+    "easy": "easy",
+    "intermediate": "intermediate",
+    "advanced": "advanced",
+    "elite": "elite",
+    "מתחיל": "starter",
+    "קל": "easy",
+    "בינוני": "intermediate",
+    "מתקדם": "advanced",
+    "רמה גבוהה": "elite",
+}
 
 _DIFF_ALIASES = {
     "easy": "Easy",
     "קל": "Easy",
     "beginner": "Easy",
+    "starter": "Easy",
     "בסיסי": "Easy",
     "1": "Easy",
     "medium": "Medium",
@@ -35,6 +63,7 @@ _DIFF_ALIASES = {
     "hard": "Hard",
     "קשה": "Hard",
     "advanced": "Hard",
+    "elite": "Hard",
     "מתקדם": "Hard",
     "3": "Hard",
     "bagrut": "Hard",
@@ -42,21 +71,35 @@ _DIFF_ALIASES = {
 }
 
 PRACTICE_MIX = {
-    "beginner": {"Easy": 0.88, "Medium": 0.12, "Hard": 0.0},
+    "starter": {"Easy": 0.92, "Medium": 0.08, "Hard": 0.0},
+    "easy": {"Easy": 0.70, "Medium": 0.28, "Hard": 0.02},
     "intermediate": {"Easy": 0.18, "Medium": 0.64, "Hard": 0.18},
-    "advanced": {"Easy": 0.05, "Medium": 0.30, "Hard": 0.65},
+    "advanced": {"Easy": 0.08, "Medium": 0.32, "Hard": 0.60},
+    "elite": {"Easy": 0.02, "Medium": 0.23, "Hard": 0.75},
 }
 
 EXAM_MIX = {
-    "beginner": {"Easy": 0.75, "Medium": 0.25, "Hard": 0.0},
+    "starter": {"Easy": 0.85, "Medium": 0.15, "Hard": 0.0},
+    "easy": {"Easy": 0.60, "Medium": 0.35, "Hard": 0.05},
     "intermediate": {"Easy": 0.12, "Medium": 0.63, "Hard": 0.25},
-    "advanced": {"Easy": 0.0, "Medium": 0.28, "Hard": 0.72},
+    "advanced": {"Easy": 0.0, "Medium": 0.30, "Hard": 0.70},
+    "elite": {"Easy": 0.0, "Medium": 0.18, "Hard": 0.82},
 }
 
 # כמה שאלות / כמה זמן לכל רמה. מבחן אמיתי נהיה ארוך ורציני יותר.
 SESSION_SHAPE = {
-    "beginner": {
-        "practice": 15,
+    "starter": {
+        "practice": 12,
+        "guided": 5,
+        "compose": 8,
+        "mock": 10,
+        "timed": 10,
+        "final": 16,
+        "seconds": 100,
+        "mock_timed": False,
+    },
+    "easy": {
+        "practice": 14,
         "guided": 6,
         "compose": 10,
         "mock": 12,
@@ -85,18 +128,33 @@ SESSION_SHAPE = {
         "seconds": 55,
         "mock_timed": True,
     },
+    "elite": {
+        "practice": 20,
+        "guided": 8,
+        "compose": 16,
+        "mock": 22,
+        "timed": 22,
+        "final": 40,
+        "seconds": 50,
+        "mock_timed": True,
+    },
 }
 
 PROMOTE = {
-    "beginner": {"window": 8, "accuracy": 0.80, "min_at_level": 8},
+    "starter": {"window": 7, "accuracy": 0.78, "min_at_level": 7},
+    "easy": {"window": 8, "accuracy": 0.80, "min_at_level": 8},
     "intermediate": {"window": 10, "accuracy": 0.78, "min_at_level": 10},
+    "advanced": {"window": 12, "accuracy": 0.80, "min_at_level": 12},
 }
 DEMOTE = {
+    "easy": {"window": 7, "accuracy": 0.40, "min_at_level": 7},
     "intermediate": {"window": 8, "accuracy": 0.42, "min_at_level": 8},
     "advanced": {"window": 8, "accuracy": 0.48, "min_at_level": 8},
+    "elite": {"window": 10, "accuracy": 0.50, "min_at_level": 10},
 }
 
-RECENT_KEEP = 40
+RECENT_KEEP = 60
+RETENTION_HALF_LIFE_H = 72.0
 BAGRUT_MARKERS = ("בגרות", "מימ״ד", "מימד", "מימ\"ד")
 
 
@@ -135,25 +193,40 @@ def sort_questions_progressive(questions: list[dict]) -> list[dict]:
     )
 
 
+def normalize_level(level: str | None) -> str:
+    raw = str(level or "").strip()
+    mapped = _LEGACY_LEVEL.get(raw) or _LEGACY_LEVEL.get(raw.casefold())
+    if mapped in LEVELS:
+        return mapped
+    return "starter"
+
+
 def next_level(level: str) -> str | None:
-    if level == "beginner":
-        return "intermediate"
-    if level == "intermediate":
-        return "advanced"
-    return None
+    lvl = normalize_level(level)
+    try:
+        i = LEVELS.index(lvl)
+    except ValueError:
+        return "easy"
+    return LEVELS[i + 1] if i + 1 < len(LEVELS) else None
 
 
 def prev_level(level: str) -> str | None:
-    if level == "advanced":
-        return "intermediate"
-    if level == "intermediate":
-        return "beginner"
-    return None
+    lvl = normalize_level(level)
+    try:
+        i = LEVELS.index(lvl)
+    except ValueError:
+        return None
+    return LEVELS[i - 1] if i > 0 else None
+
+
+def level_he(level: str) -> str:
+    return LEVEL_HE.get(normalize_level(level), "מתחיל")
 
 
 def mix_for(level: str, exam: bool = False) -> dict[str, float]:
     table = EXAM_MIX if exam else PRACTICE_MIX
-    return dict(table.get(level) or table["beginner"])
+    lvl = normalize_level(level)
+    return dict(table.get(lvl) or table["starter"])
 
 
 DIFF_WEIGHT = {"Easy": 0.75, "Medium": 1.0, "Hard": 1.35}
@@ -355,11 +428,14 @@ def filter_lessons(
     """מתחילים רואים שיעורים בסיסיים; מתקדמים מקבלים גם מימ״ד/בגרות."""
     if not lessons:
         return []
+    lvl = normalize_level(level)
     allowed = {
-        "beginner": {"Easy"},
+        "starter": {"Easy"},
+        "easy": {"Easy", "Medium"},
         "intermediate": {"Easy", "Medium"},
         "advanced": {"Easy", "Medium", "Hard"},
-    }.get(level, {"Easy"})
+        "elite": {"Easy", "Medium", "Hard"},
+    }.get(lvl, {"Easy"})
     topic_diff = topic_difficulty_map(questions)
     ranked = []
     for lesson in lessons:
@@ -367,7 +443,7 @@ def filter_lessons(
         ranked.append((lesson, diff))
     filtered = [lesson for lesson, diff in ranked if diff in allowed]
     if not filtered:
-        if level == "beginner":
+        if lvl in {"starter", "easy"}:
             filtered = [lesson for lesson, diff in ranked if diff in {"Easy", "Medium"}]
         if not filtered:
             return sort_lessons(list(lessons))
@@ -375,20 +451,21 @@ def filter_lessons(
 
 
 def session_params(level: str, mode: str) -> dict[str, Any]:
-    shape = SESSION_SHAPE.get(level) or SESSION_SHAPE["beginner"]
+    lvl = normalize_level(level)
+    shape = SESSION_SHAPE.get(lvl) or SESSION_SHAPE["starter"]
     mode_key = mode if mode in shape else "practice"
     count = int(shape.get(mode_key, shape["practice"]))
     per_q = int(shape["seconds"])
     exam = mode in {"mock", "final", "timed"}
     timed = mode in {"final", "timed"} or (mode == "mock" and bool(shape.get("mock_timed")))
     return {
-        "level": level,
+        "level": lvl,
         "count": count,
         "seconds": per_q if timed else None,
         "total_limit_sec": (per_q * count) if mode == "final" else None,
         "exam": exam,
-        "mix": mix_for(level, exam=exam),
-        "label": LEVEL_HE.get(level, "מתחיל"),
+        "mix": mix_for(lvl, exam=exam),
+        "label": LEVEL_HE.get(lvl, "מתחיל"),
     }
 
 
@@ -415,11 +492,15 @@ class AdaptiveEngine:
         total = int(progress.get("total", 0) or 0)
         correct = int(progress.get("correct", 0) or 0)
         acc = (correct / total) if total else 0.0
+        if total >= 28 and acc >= 0.88:
+            return "elite"
         if total >= 18 and acc >= 0.80:
             return "advanced"
-        if total >= 8 and acc >= 0.75:
+        if total >= 12 and acc >= 0.75:
             return "intermediate"
-        return "beginner"
+        if total >= 6 and acc >= 0.70:
+            return "easy"
+        return "starter"
 
     def _fresh_record(self, subject: str) -> dict:
         return {
@@ -435,13 +516,28 @@ class AdaptiveEngine:
         key = subject_key(subject)
         data = self._all()
         rec = data.get(key)
-        if not isinstance(rec, dict) or rec.get("level") not in LEVELS:
+        if not isinstance(rec, dict):
             rec = self._fresh_record(key)
+            self._save(key, rec)
+            return rec
+        raw_level = rec.get("level")
+        lvl = normalize_level(raw_level)
+        if raw_level != lvl:
+            rec = dict(rec)
+            rec["level"] = lvl
             self._save(key, rec)
         return rec
 
     def level_of(self, subject: str) -> str:
-        return self.record_for(subject).get("level") or "beginner"
+        return normalize_level(self.record_for(subject).get("level"))
+
+    def set_level(self, subject: str, level: str) -> None:
+        key = subject_key(subject)
+        rec = self.record_for(key)
+        rec["level"] = normalize_level(level)
+        rec["answers_at_level"] = 0
+        rec["changed_at"] = time.strftime("%Y-%m-%d %H:%M")
+        self._save(key, rec)
 
     def consume_event(self, subject: str) -> dict | None:
         rec = self.record_for(subject)
@@ -497,7 +593,7 @@ class AdaptiveEngine:
         return last
 
     def _maybe_adjust(self, subject: str, rec: dict) -> dict | None:
-        level = rec.get("level") or "beginner"
+        level = normalize_level(rec.get("level"))
         at_level = int(rec.get("answers_at_level", 0) or 0)
         recent = rec.get("recent") or []
 
@@ -529,8 +625,8 @@ class AdaptiveEngine:
             return False
         if _mostly_guessing(window):
             return False
-        # למתקדם צריך גם הצלחה בחומר שאינו קל — אחרת זה מזל על שאלות בסיס.
-        if level == "intermediate" and not _showed_depth(window):
+        # מעבר למתקדם/רמה גבוהה דורש גם הצלחה בחומר שאינו קל.
+        if level in {"intermediate", "advanced"} and not _showed_depth(window):
             return False
         return True
 
@@ -545,7 +641,8 @@ class AdaptiveEngine:
         return True
 
     def _apply_change(self, subject: str, rec: dict, new_level: str, kind: str) -> dict:
-        old = rec.get("level") or "beginner"
+        old = normalize_level(rec.get("level"))
+        new_level = normalize_level(new_level)
         rec["level"] = new_level
         rec["answers_at_level"] = 0
         rec["changed_at"] = time.strftime("%Y-%m-%d %H:%M")
@@ -556,20 +653,25 @@ class AdaptiveEngine:
         name = subject_label(subject)
         if kind == "promote":
             title = f"עלית לרמה {LEVEL_HE[new_level]} ב{name}"
-            if new_level == "intermediate":
-                message = (
-                    f"האנליסט זיהה שאתה שולט בחומר הבסיסי של {name}. "
+            blurbs = {
+                "easy": f"הבסיס ב{name} יושב. מעכשיו קצת יותר מאתגר, עדיין בקצב נוח.",
+                "intermediate": (
+                    f"נראה ש{name} בבסיס כבר יושב. "
                     "מעכשיו התרגול, השיעורים והמבחנים יהיו ברמה בינונית, יותר רציניים."
-                )
-            else:
-                message = (
+                ),
+                "advanced": (
                     f"מצוין. {name} עבר לרמת מתקדם. "
                     "השאלות קשות יותר, השיעורים כוללים מימ״ד/בגרות, והמבחן עם שעון צמוד."
-                )
+                ),
+                "elite": (
+                    f"{name} ברמה גבוהה. חומר בגרות מלא, מבחנים ארוכים, וציפייה לדיוק גבוה."
+                ),
+            }
+            message = blurbs.get(new_level, f"הרמה ב{name} עלתה ל{LEVEL_HE[new_level]}.")
         else:
             title = f"חזרה לרמה {LEVEL_HE[new_level]} ב{name}"
             message = (
-                f"הדיוק ירד, אז האנליסט מוריד הילוך ב{name}. "
+                f"הדיוק ירד ב{name}, אז חוזרים קצת אחורה. "
                 "נתרגל שוב מהרמה הזו עד שהחומר יתייצב."
             )
         event = {
@@ -631,7 +733,7 @@ class AdaptiveEngine:
                 first_n = min(want, len(primary)) if primary else 0
             else:
                 struggle = self.struggling(subject)
-                share = 0.85 if struggle else 0.65
+                share = 0.90 if struggle else 0.72
                 first_n = min(want, max(1, int(want * share)), len(primary)) if primary else 0
             picked = pick_by_mix(primary, params["mix"], first_n, scorer=scorer, avoid_ids=avoid) if primary else []
             need = want - len(picked)
@@ -648,32 +750,250 @@ class AdaptiveEngine:
         return filter_lessons(lessons, self.level_of(subject), questions)
 
     def weak_topics(self, subject: str, limit: int = 3) -> list[str]:
-        """נושאים עם מספיק דגימות ודיוק נמוך — לחיזוק ממוקד בבחירת שאלות."""
+        """נושאים עם דיוק נמוך אמיתי (Wilson + דעיכה) — לחיזוק ממוקד."""
+        scored = self.topic_scores(subject)
+        weak = [row for row in scored if row.get("weak")]
+        return [row["topic"] for row in weak[:limit]]
+
+    def topic_scores(self, subject: str) -> list[dict[str, Any]]:
+        """דירוג נושאים עם ביטחון סטטיסטי, דעיכת זמן, וקושי."""
         rec = self.record_for(subject)
-        buckets: dict[str, list[bool]] = {}
+        buckets: dict[str, list[dict]] = {}
+        now = time.time()
         for row in rec.get("recent") or []:
             topic = str(row.get("topic") or "").strip()
             if not topic:
                 continue
-            buckets.setdefault(topic, []).append(bool(row.get("correct")))
-        ranked: list[tuple[float, int, str]] = []
-        for topic, flags in buckets.items():
-            # גם אחרי 2 טעויות ברצף כדאי להתחיל לחזק
-            if len(flags) < 2:
+            buckets.setdefault(topic, []).append(row)
+        ranked: list[dict[str, Any]] = []
+        for topic, rows in buckets.items():
+            if len(rows) < 2:
                 continue
-            acc = sum(flags) / len(flags)
-            threshold = 0.55 if len(flags) >= 4 else 0.50
-            if acc <= threshold:
-                ranked.append((acc, -len(flags), topic))
-        ranked.sort()
-        return [topic for _, __, topic in ranked[:limit]]
+            correct = sum(1 for row in rows if row.get("correct"))
+            total = len(rows)
+            raw_acc = correct / total
+            conf = wilson_lower(correct, total)
+            # דעיכה: טעויות אחרונות שוקלות יותר
+            w_acc = weighted_accuracy(
+                [
+                    {
+                        "correct": row.get("correct"),
+                        "difficulty": row.get("difficulty") or "Easy",
+                    }
+                    for row in rows
+                ],
+                half_life=max(4.0, total / 2),
+            )
+            rush = 0
+            timed = 0
+            for row in rows:
+                if row.get("time_sec") is None:
+                    continue
+                timed += 1
+                try:
+                    if float(row["time_sec"]) < RUSH_SEC and not row.get("correct"):
+                        rush += 1
+                except (TypeError, ValueError):
+                    pass
+            # שמירה: נושא שלא נגע בו הרבה זמן יורד בציון
+            last_ts = None
+            for row in reversed(rows):
+                stamp = str(row.get("ts") or "")
+                if stamp:
+                    try:
+                        last_ts = time.mktime(time.strptime(stamp, "%Y-%m-%d %H:%M"))
+                        break
+                    except ValueError:
+                        continue
+            retention = 1.0
+            if last_ts:
+                age_h = max(0.0, (now - last_ts) / 3600.0)
+                retention = 0.5 ** (age_h / RETENTION_HALF_LIFE_H)
+            strength = (0.45 * conf + 0.40 * w_acc + 0.15 * raw_acc) * (0.7 + 0.3 * retention)
+            threshold = 0.58 if total >= 4 else 0.50
+            weak = strength <= threshold or (raw_acc <= 0.45 and total >= 3)
+            ranked.append(
+                {
+                    "topic": topic,
+                    "total": total,
+                    "correct": correct,
+                    "accuracy": round(raw_acc * 100, 1),
+                    "confidence": round(conf * 100, 1),
+                    "strength": round(strength, 3),
+                    "rush_misses": rush,
+                    "weak": weak,
+                }
+            )
+        ranked.sort(key=lambda item: (item["strength"], item["total"]))
+        return ranked
 
-    def struggling(self, subject: str) -> dict[str, Any] | None:
-        """כשהתלמיד ממש נכשל במקצוע/נושא — אות לאימון חזק יותר."""
-        snap = self.snapshot(subject)
-        total = int(snap.get("recent_total") or 0)
-        acc = float(snap.get("recent_accuracy") or 100)
-        weak = list(snap.get("weak_topics") or [])
+    def mistake_patterns(self, subject: str) -> list[dict[str, Any]]:
+        """דפוסי טעות: ניחוש מהיר, קושי גבוה, רצף טעויות."""
+        recent = list(self.record_for(subject).get("recent") or [])
+        if len(recent) < 4:
+            return []
+        patterns: list[dict[str, Any]] = []
+        times = [
+            float(row["time_sec"])
+            for row in recent
+            if row.get("time_sec") is not None and not row.get("correct")
+        ]
+        if len(times) >= 3 and sum(1 for t in times if t < RUSH_SEC) / len(times) >= 0.5:
+            patterns.append(
+                {
+                    "kind": "rush",
+                    "title": "ניחושים מהירים",
+                    "message": "הרבה טעויות אחרי מענה קצר מ־3 שניות. לקרוא עד הסוף לפני בחירה.",
+                }
+            )
+        hard_miss = [
+            row
+            for row in recent
+            if not row.get("correct") and normalize_difficulty(row.get("difficulty")) == "Hard"
+        ]
+        if len(hard_miss) >= 3:
+            patterns.append(
+                {
+                    "kind": "hard",
+                    "title": "קושי בשאלות קשות",
+                    "message": "נופלים בשאלות ברמה גבוהה. לחזק קודם בינוני יציב, ואז לחזור לקשות.",
+                }
+            )
+        streak = 0
+        best = 0
+        for row in recent:
+            if row.get("correct"):
+                streak = 0
+            else:
+                streak += 1
+                best = max(best, streak)
+        if best >= 4:
+            patterns.append(
+                {
+                    "kind": "streak",
+                    "title": "רצף טעויות",
+                    "message": f"היה רצף של {best} טעויות. עדיף סשן קצר עם הסבר אחרי כל תשובה.",
+                }
+            )
+        return patterns
+
+    def exam_readiness(self, subject: str) -> dict[str, Any]:
+        """תחזית מוכנות למבחן (ציון 0..1 + ייעוץ). בלי לקרוא ל-snapshot."""
+        rec = self.record_for(subject)
+        level = normalize_level(rec.get("level"))
+        promo = PROMOTE.get(level)
+        recent = list(rec.get("recent") or [])
+        window = promo["window"] if promo else 8
+        slice_ = recent[-window:]
+        total = len(slice_)
+        acc = (sum(1 for row in slice_ if row.get("correct")) / total) if total else 0.0
+        weak = self.weak_topics(subject)
+        at_level = int(rec.get("answers_at_level") or 0)
+        patterns = self.mistake_patterns(subject)
+        struggle = self._struggle_from_parts(subject, total, acc * 100, weak, patterns)
+        score = 0.0
+        if total >= 4:
+            score += 0.35 * acc
+        level_bonus = {
+            "easy": 0.08,
+            "intermediate": 0.16,
+            "advanced": 0.24,
+            "elite": 0.30,
+        }.get(level, 0.0)
+        score += level_bonus
+        score += min(0.18, at_level / 40.0)
+        score -= 0.08 * min(3, len(weak))
+        score -= 0.06 * len(patterns)
+        if struggle:
+            score -= 0.15
+        score = max(0.0, min(1.0, score))
+        if total < 6:
+            label = "עדיין מוקדם"
+            advice = "צריך עוד כמה סשנים לפני שמדברים על מבחן אמיתי."
+        elif score >= 0.78:
+            label = "מוכן למבחן דמה"
+            advice = "אפשר מבחן דמה. אם הדיוק מחזיק, גם מבחן אמיתי."
+        elif score >= 0.58:
+            label = "כמעט מוכן"
+            advice = (
+                f"עוד חיזוק ב{' · '.join(weak[:2])}." if weak else "עוד סשן יציב ברמה הנוכחית."
+            )
+        else:
+            label = "לא מוכן עדיין"
+            advice = (
+                f"להתמקד ב{' · '.join(weak[:2])} לפני מבחן."
+                if weak
+                else "לחזק דיוק בסשנים קצרים עם הסבר."
+            )
+        return {
+            "subject": subject_key(subject),
+            "score": round(score, 3),
+            "label": label,
+            "advice": advice,
+            "weak_topics": weak,
+            "patterns": [p.get("kind") for p in patterns],
+        }
+
+    def action_plan(self, subject: str) -> dict[str, Any]:
+        """תוכנית פעולה קצרה למסך / חדר מפתח."""
+        rec = self.record_for(subject)
+        level = normalize_level(rec.get("level"))
+        promo = PROMOTE.get(level)
+        recent = list(rec.get("recent") or [])
+        window = promo["window"] if promo else 8
+        slice_ = recent[-window:]
+        total = len(slice_)
+        correct = sum(1 for row in slice_ if row.get("correct"))
+        acc = (100.0 * correct / total) if total else 0.0
+        at_level = int(rec.get("answers_at_level") or 0)
+        weak = self.weak_topics(subject)
+        patterns = self.mistake_patterns(subject)
+        ready = self.exam_readiness(subject)
+        nxt = next_level(level)
+        progress = 0.0
+        if promo and total:
+            n_factor = min(1.0, at_level / max(1, promo["min_at_level"]))
+            acc_factor = min(1.0, (acc / 100.0) / promo["accuracy"])
+            progress = 0.4 * n_factor + 0.6 * acc_factor
+        steps: list[str] = []
+        if self._struggle_from_parts(subject, total, acc, weak, patterns):
+            steps.append("סשן חירום: 6 עד 8 שאלות רק בנושא החלש, עם הסבר אחרי כל תשובה.")
+        if weak:
+            steps.append(f"עוד תרגול ב {' · '.join(weak[:2])} (כ־8 שאלות).")
+        for pat in patterns[:2]:
+            steps.append(pat.get("message") or pat.get("title") or "")
+        if nxt and progress >= 0.75:
+            steps.append(f"קרוב לעלייה ל{LEVEL_HE.get(nxt, nxt)}: לשמור דיוק גבוה בעוד סשן אחד.")
+        if ready.get("score", 0) >= 0.78:
+            steps.append("מבחן דמה לבדיקת יציבות בלי משוב אחרי כל שאלה.")
+        if not steps:
+            steps.append("תרגול קצר ברמה הנוכחית: 8 שאלות, בלי לקפוץ בין מקצועות.")
+        plan = {
+            "subject": subject_key(subject),
+            "title": f"מה כדאי עכשיו ב{subject_label(subject)}",
+            "steps": [s for s in steps if s][:4],
+            "readiness": ready,
+        }
+        # שכבת AI מקומית (Ollama): זיהוי פערים שקטים מעל הסטטיסטיקה הקיימת.
+        try:
+            from core import ai_tutor
+
+            plan = ai_tutor.enrichment_for_action_plan(
+                subject, plan, engine=self, storage=self.storage, use_llm=False,
+            )
+        except Exception:
+            pass
+        return plan
+
+    def _struggle_from_parts(
+        self,
+        subject: str,
+        total: int,
+        acc: float,
+        weak: list[str],
+        patterns: list[dict[str, Any]] | None = None,
+    ) -> dict[str, Any] | None:
+        patterns = patterns if patterns is not None else self.mistake_patterns(subject)
         if total >= 6 and acc < 50:
             return {
                 "severity": "subject",
@@ -690,12 +1010,37 @@ class AdaptiveEngine:
                 "total": total,
                 "topics": weak,
             }
+        if total >= 8 and len(patterns) >= 2 and acc < 70:
+            return {
+                "severity": "patterns",
+                "subject": subject,
+                "accuracy": acc,
+                "total": total,
+                "topics": weak,
+            }
         return None
 
+    def struggling(self, subject: str) -> dict[str, Any] | None:
+        """כשהתלמיד ממש נכשל במקצוע/נושא. בלי לקרוא ל-snapshot."""
+        rec = self.record_for(subject)
+        level = normalize_level(rec.get("level"))
+        promo = PROMOTE.get(level)
+        recent = list(rec.get("recent") or [])
+        window = promo["window"] if promo else 8
+        slice_ = recent[-window:]
+        total = len(slice_)
+        acc = (100.0 * sum(1 for row in slice_ if row.get("correct")) / total) if total else 100.0
+        weak = self.weak_topics(subject)
+        return self._struggle_from_parts(subject, total, acc, weak)
+
     def _content_scorer(self, subject: str, srs):
-        weak = set(self.weak_topics(subject))
+        scored = self.topic_scores(subject)
+        weak = {row["topic"] for row in scored if row.get("weak")}
+        strength = {row["topic"]: float(row.get("strength") or 0.5) for row in scored}
         srs_fn = srs.score_question if srs is not None and hasattr(srs, "score_question") else None
         struggle = self.struggling(subject)
+        patterns = self.mistake_patterns(subject)
+        prefer_easy = any(p.get("kind") == "hard" for p in patterns)
         if not weak and srs_fn is None and not struggle:
             return None
 
@@ -703,10 +1048,15 @@ class AdaptiveEngine:
             value = float(srs_fn(question)) if srs_fn else 0.0
             topic = str(question.get("topic") or "")
             if topic in weak:
-                value += 55.0 if struggle else 35.0
-            # כשנכשלים — מעדיפים שאלות דומות בסגנון (אותו נושא + אותה רמת קושי)
+                value += 60.0 if struggle else 40.0
+                value += max(0.0, (0.55 - strength.get(topic, 0.4)) * 50.0)
             if struggle and topic in set(struggle.get("topics") or weak):
-                value += 20.0
+                value += 25.0
+            diff = normalize_difficulty(question.get("difficulty"))
+            if prefer_easy and diff == "Easy":
+                value += 12.0
+            if prefer_easy and diff == "Hard":
+                value -= 8.0
             return value
 
         return score
@@ -714,7 +1064,7 @@ class AdaptiveEngine:
     # ---------- תצוגה ----------
     def snapshot(self, subject: str) -> dict[str, Any]:
         rec = self.record_for(subject)
-        level = rec.get("level") or "beginner"
+        level = normalize_level(rec.get("level"))
         nxt = next_level(level)
         promo = PROMOTE.get(level)
         recent = list(rec.get("recent") or [])
@@ -727,14 +1077,22 @@ class AdaptiveEngine:
         if promo:
             n_factor = min(1.0, at_level / max(1, promo["min_at_level"]))
             acc_factor = min(1.0, (acc / 100.0) / promo["accuracy"]) if total else 0.0
-            progress = round(0.4 * n_factor + 0.6 * acc_factor, 3) if total else round(0.4 * n_factor, 3)
+            w_acc = weighted_accuracy(slice_) if slice_ else 0.0
+            progress = (
+                round(0.35 * n_factor + 0.45 * acc_factor + 0.20 * min(1.0, w_acc / max(promo["accuracy"], 0.01)), 3)
+                if total
+                else round(0.35 * n_factor, 3)
+            )
         else:
             progress = 1.0
         weak = self.weak_topics(subject)
+        ready = self.exam_readiness(subject)
         blurbs = {
-            "beginner": "מתחילים מקל בכוונה. כשתצליח ביציבות, נעלה לבינוני, והתרגול, השיעורים והמבחנים יהיו רציניים יותר.",
-            "intermediate": "הרמה עלתה. השאלות והשיעורים יותר מעמיקים. עוד הצלחה יציבה תוביל למתקדם.",
-            "advanced": "רמת בגרות. שאלות קשות, שיעורי מימ״ד, ומבחנים ארוכים עם שעון.",
+            "starter": "מתחילים בקלות. כשיש רצף הצלחות, עולים שלב.",
+            "easy": "רמה קלה. עוד קצת יציבות ועוברים לבינוני.",
+            "intermediate": "כבר לא מתחילים. השאלות עמוקות יותר. עוד הצלחה תוביל למתקדם.",
+            "advanced": "רמה גבוהה: שאלות קשות ומבחנים עם שעון.",
+            "elite": "רמה גבוהה מאוד. שומרים על דיוק גם במבחן ארוך.",
         }
         shape = SESSION_SHAPE[level]
         need_pct = int(promo["accuracy"] * 100) if promo else 0
@@ -751,7 +1109,8 @@ class AdaptiveEngine:
             "answers_at_level": at_level,
             "progress": progress,
             "weak_topics": weak,
-            "headline": f"{LEVEL_EMOJI[level]}  רמה במקצוע: {LEVEL_HE[level]}",
+            "exam_readiness": ready,
+            "headline": f"רמה במקצוע: {LEVEL_HE[level]}",
             "blurb": blurbs[level],
             "progress_caption": (
                 f"כדי לעלות ל{LEVEL_HE[nxt]}: {correct}/{window} נכונות אחרונות (צריך {need_pct}%)"
@@ -779,10 +1138,19 @@ class AdaptiveEngine:
                 "action": "level_changed",
             }
         name = subject_label(snap["subject"])
+        plan = self.action_plan(snap["subject"])
+        patterns = self.mistake_patterns(snap["subject"])
         nxt = snap.get("next_level")
         window = max(1, int(snap.get("recent_total") or 0))
         have = int(snap.get("recent_correct") or 0)
         promo = PROMOTE.get(snap["level"])
+        if patterns and patterns[0].get("kind") == "rush" and window >= 5:
+            return {
+                "tone": "pace",
+                "title": f"לאט יותר ב{name}",
+                "message": patterns[0]["message"],
+                "action": "slow_down",
+            }
         if nxt and promo and window >= promo["window"] - 2:
             need = int(round(promo["accuracy"] * promo["window"]))
             if have >= need - 2:
@@ -797,29 +1165,42 @@ class AdaptiveEngine:
                 }
         weak = snap.get("weak_topics") or []
         struggle = self.struggling(snap["subject"])
-        if struggle and struggle.get("severity") == "subject":
+        if struggle and struggle.get("severity") in {"subject", "patterns"}:
             topics = " · ".join((struggle.get("topics") or weak)[:2]) or "החומר האחרון"
+            gap = plan.get("silent_gap") or {}
+            ai_msg = str(plan.get("ai_message") or gap.get("message") or "").strip()
             return {
                 "tone": "struggle",
-                "title": f"עוצרים רגע ב{name}",
-                "message": (
+                "title": gap.get("coach_title") or f"עוצרים רגע ב{name}",
+                "message": ai_msg or (
                     f"ב{name} יצא {int(struggle['accuracy'])}% ב{struggle['total']} האחרונות. "
-                    f"האנליסט ישים עכשיו שאלות בסגנון שקשה שם"
+                    f"נתרגל עכשיו שאלות בסגנון שקשה שם"
                     + (f" ({topics})" if topics else "")
                     + ", עם הסבר אחרי כל תשובה."
                 ),
                 "action": "drill_weak_topic",
             }
-        if weak and snap.get("recent_accuracy", 100) < 70:
+        if weak and snap.get("recent_accuracy", 100) < 72:
             topics = " · ".join(weak[:2])
+            step = (plan.get("steps") or [""])[0]
+            gap = plan.get("silent_gap") or {}
+            ai_msg = str(plan.get("ai_message") or gap.get("message") or "").strip()
             return {
                 "tone": "weak_topic",
-                "title": f"חיזוק ממוקד ב{name}",
-                "message": (
+                "title": gap.get("coach_title") or f"בואו נחזק את {name}",
+                "message": ai_msg or (
                     f"יש קושי ב{topics}. "
-                    "התרגול הבא ייטה לשם, כדי לסגור את הפער במקום לברוח למקצוע אחר."
+                    + (step or "התרגול הבא ייטה לשם, כדי לסגור את הפער.")
                 ),
                 "action": "drill_weak_topic",
+            }
+        ready = snap.get("exam_readiness") or {}
+        if snap["level"] == "advanced" and ready.get("score", 0) >= 0.78:
+            return {
+                "tone": "level_advanced",
+                "title": snap["headline"],
+                "message": f"{name} יציב למבחן. {ready.get('advice') or 'מבחן דמה יבדוק אם זה מחזיק תחת שעון.'}",
+                "action": "exam_ready",
             }
         if snap["level"] == "advanced" and snap.get("recent_accuracy", 100) >= 80 and window >= 6:
             return {
@@ -894,7 +1275,7 @@ class AdaptiveEngine:
                     "message": (
                         f"ב{name} רק {int(struggle['accuracy'])}% ב{struggle['total']} האחרונות. "
                         + (f"הנושא שתוקעים בו: {topics}. " if topics else "")
-                        + "כנסו לתרגול שם. האנליסט יבחר שאלות באותו סגנון ויסביר אחרי כל תשובה."
+                        + "כנסו לתרגול שם. נבחר שאלות באותו סגנון ונסביר אחרי כל תשובה."
                     ),
                     "action": "practice_weak_subject",
                 }
@@ -921,7 +1302,10 @@ class AdaptiveEngine:
         if near:
             return self._coach_for_snapshot(near[0])
 
-        beginners = [item for item in snapshots if item["level"] == "beginner" and item["answers_at_level"] < 8]
+        beginners = [
+            item for item in snapshots
+            if item["level"] in {"starter", "easy"} and item["answers_at_level"] < 8
+        ]
         if beginners:
             name = subject_label(beginners[0]["subject"])
             return {
@@ -929,12 +1313,12 @@ class AdaptiveEngine:
                 "title": "מתחילים מקל",
                 "message": (
                     f"ב{name} ובשאר המקצועות מתחילים משאלות קלות. "
-                    "האנליסט יזהה הצלחה ויעלה לבד לבינוני, ואז גם העיוני והמבחנים נהיים רציניים יותר."
+                    "כשתצליחו ביציבות הרמה תעלה לבד, ואז גם השיעורים והמבחנים נהיים רציניים יותר."
                 ),
                 "action": "short_start",
             }
 
-        advancing = [item for item in snapshots if item["level"] != "beginner"]
+        advancing = [item for item in snapshots if item["level"] not in {"starter", "easy"}]
         if advancing:
             names = " · ".join(subject_label(item["subject"]) for item in advancing[:3])
             return {
@@ -947,7 +1331,7 @@ class AdaptiveEngine:
         return {
             "tone": "easy_start",
             "title": "התחלה עדינה",
-            "message": "בחרו מקצוע. נתחיל מקל, והאנליסט יעלה את הרמה כשתצליחו.",
+            "message": "בחרו מקצוע. מתחילים מקל, והרמה עולה כשתצליחו.",
             "action": "short_start",
         }
 

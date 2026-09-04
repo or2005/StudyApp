@@ -143,8 +143,20 @@ def build_meimad_exam(load_subject: Callable[[str], dict | None], seed: int | No
 
 
 def can_take_meimad(storage) -> bool:
-    """אחרי אבחון, אפשר לשבת. בלי נעילה ארוכה: המבחן הזה הוא אימון, לא תעודה."""
-    return bool(getattr(storage, "get_diagnostic", lambda: None)())
+    """אחרי אבחון, או אחרי הרשמה מלאה מרמה בינונית ומעלה."""
+    if getattr(storage, "get_diagnostic", lambda: None)():
+        return True
+    try:
+        from core.learner_prefs import LEVEL_KEYS, onboarding_complete, preferred_level
+    except Exception:
+        return False
+    if not onboarding_complete(storage):
+        return False
+    lvl = preferred_level(storage)
+    try:
+        return LEVEL_KEYS.index(lvl) >= LEVEL_KEYS.index("intermediate")
+    except ValueError:
+        return False
 
 
 def section_names() -> list[str]:

@@ -104,19 +104,48 @@ def scrub_question(question: dict) -> dict:
     if correct:
         wrongs = [x for x in opts if str(x).strip() and str(x).strip() != correct]
         fresh = unique_options(correct, wrongs, prompt=prompt)
-        roller = random.Random(_option_seed(item))
-        roller.shuffle(fresh)
-        item["options"] = fresh
-        item["answer"] = fresh.index(correct)
-        item["correct_answer"] = correct
+        # חיזוק מסיחים: בלי אבסורד ובלי מספרים מטורפים
+        try:
+            from core.mcq_quality import harden_options
+
+            answer = fresh.index(correct) if correct in fresh else 0
+            fresh, answer = harden_options(
+                fresh,
+                answer,
+                topic=str(item.get("topic") or ""),
+                prompt=prompt,
+            )
+            if correct not in fresh:
+                fresh = [correct] + [x for x in fresh if x != correct]
+                answer = 0
+            else:
+                answer = fresh.index(correct)
+            roller = random.Random(_option_seed(item))
+            order = list(range(len(fresh[:4])))
+            roller.shuffle(order)
+            shuffled = [fresh[i] for i in order]
+            item["options"] = shuffled
+            item["answer"] = shuffled.index(correct)
+            item["correct_answer"] = correct
+        except Exception:
+            roller = random.Random(_option_seed(item))
+            roller.shuffle(fresh)
+            item["options"] = fresh
+            item["answer"] = fresh.index(correct)
+            item["correct_answer"] = correct
     from core.teach import clarify_stem
+    from core.stem_fix import clean_topic_label
 
     item["question"] = clarify_stem(item)
+    if item.get("topic"):
+        item["topic"] = clean_topic_label(str(item.get("topic") or ""))
     return item
 
 
 def suggest_distractors(correct: str, prompt: str = "") -> list[str]:
     """מסיחים מגוונים: מספרים קרובים, שנים סבירות, או ניסוחים שונים זה מזה."""
+    from core.mcq_quality import distractors_for, is_absurd_option
+
     parsed = _leading_number(correct)
     out: list[str] = []
     if parsed is not None:
@@ -146,13 +175,13 @@ def suggest_distractors(correct: str, prompt: str = "") -> list[str]:
                 if text != str(correct):
                     out.append(text)
     else:
+        out.extend(distractors_for("", prompt, correct, need=8))
         words = [w for w in re.split(r"\s+", str(correct).strip()) if w]
         if len(words) >= 2:
             out.append(" ".join(words[1:] + words[:1]))
             out.append(words[0])
             if len(words) > 2:
                 out.append(" ".join(words[:-1]))
-        # מסיחים איכותיים ושונים, לא אותה תבנית ממוספרת
         out.extend(_GENERIC_DISTRACTORS)
         blob = f"{correct} {prompt}"
         if any(ch in blob for ch in "אבגדהוזחטיכלמנסעפצקרשת"):
@@ -178,6 +207,8 @@ def suggest_distractors(correct: str, prompt: str = "") -> list[str]:
         key = _norm(text)
         if not text or key in seen:
             continue
+        if is_absurd_option(text):
+            continue
         if _too_similar(correct, text):
             continue
         clean.append(text)
@@ -187,15 +218,20 @@ def suggest_distractors(correct: str, prompt: str = "") -> list[str]:
 
 def unique_options(correct: str, wrongs: list[str], prompt: str = "") -> list[str]:
     """ארבע אפשרויות שונות באמת: התשובה + שלושה מסיחים מובחנים."""
+    from core.mcq_quality import distractors_for, is_absurd_option
+
     want = str(correct).strip()
     opts = [want]
     seen = {_norm(want)}
     pool = [str(x).strip() for x in list(wrongs) if str(x).strip()]
+    pool.extend(distractors_for("", prompt, want, need=8))
 
     def try_add(raw: str) -> bool:
         text = str(raw or "").strip()
         key = _norm(text)
         if not text or key in seen:
+            return False
+        if is_absurd_option(text):
             return False
         if _junk_option(want, text, prompt, siblings=pool + opts):
             return False
@@ -224,7 +260,6 @@ def unique_options(correct: str, wrongs: list[str], prompt: str = "") -> list[st
         if len(opts) >= 4:
             break
         try_add(item)
-    # אם עדיין חסר (נדיר), מספרים שונים כדי לא לשבור את המבנה
     n = 1
     while len(opts) < 4:
         text = f"אפשרות שאינה נכונה כאן ({n})"
@@ -288,8 +323,11 @@ def make_question(
         item["passage"] = passage
         item["passage_id"] = passage_id or qid
     from core.teach import clarify_stem
+    from core.stem_fix import clean_topic_label
 
     item["question"] = clarify_stem(item)
+    if item.get("topic"):
+        item["topic"] = clean_topic_label(str(item.get("topic") or ""))
     return item
 
 

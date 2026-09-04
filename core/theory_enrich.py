@@ -1,14 +1,16 @@
-"""מרחיב שיעורים עיוניים בלי לגעת בשאלות. רץ בטעינה ובבנייה."""
+"""מסדר שיעורים עיוניים לקריאה ברורה. רץ בטעינה ובבנייה."""
 from __future__ import annotations
 
-from core.config import subject_label
-from core.theory_library import EXTRA_LESSONS, VOICE
+from core.config import subject_key
+from core.lesson_plain import organize_to_text
+from core.theory_library import EXTRA_LESSONS
 
-MARKER = "למה זה חשוב"
+# כותרת סעיף שמסמנת שהשיעור כבר מסודר
+MARKER = "הסבר"
 
 
 def expand_lessons(subject: str, bank: dict) -> dict:
-    key = str(subject or bank.get("subject") or "")
+    key = subject_key(str(subject or bank.get("subject") or ""))
     lessons = list(bank.get("lessons") or [])
     for lesson in lessons:
         lesson["content"] = expand_one(key, lesson)
@@ -37,53 +39,5 @@ def expand_lessons(subject: str, bank: dict) -> dict:
 def expand_one(subject: str, lesson: dict) -> str:
     title = str(lesson.get("title") or lesson.get("topic") or "")
     topic = str(lesson.get("topic") or title)
-    raw = str(lesson.get("content") or "").strip()
-    if MARKER in raw:
-        return raw
-    parts = [raw] if raw else [title]
-    from core.teach import match_depth
-
-    depth = match_depth(subject, f"{title} {topic} {raw[:800]}")
-    if depth and depth not in raw:
-        parts.extend(["", "הרחבה", depth])
-    voice = VOICE.get(subject) or VOICE.get("_default") or {}
-    name = subject_label(subject)
-    topic_clean = topic.replace(f"{subject}_", "").strip() or name
-    parts.extend(
-        [
-            "",
-            MARKER,
-            (voice.get("why") or "הנושא הזה חוזר במבחן וביום־יום. מי שמבין אותו חוסך ניחושים.").format(
-                topic=topic_clean, subject=name
-            ),
-            "",
-            "איך ללמוד את זה",
-            (voice.get("how") or _default_how()).format(topic=topic_clean, subject=name),
-            "",
-            "טעויות נפוצות",
-            (voice.get("mistakes") or "ממהרים לתשובה לפני שקראו את כל השאלה.").format(
-                topic=topic_clean, subject=name
-            ),
-            "",
-            "סיכום לפני תרגול",
-            (voice.get("recap") or "חזרו על הדוגמה בקול, ואז ענו על שלוש שאלות לאט.").format(
-                topic=topic_clean, subject=name
-            ),
-        ]
-    )
-    return "\n".join(parts).strip()
-
-
-def _match_depth(subject: str, blob: str) -> str:
-    from core.teach import match_depth
-
-    return match_depth(subject, blob)
-
-
-def _default_how() -> str:
-    return (
-        "1. קראו פעם אחת בלי לענות.\n"
-        "2. סמנו מילה אחת שלא ברורה.\n"
-        "3. חזרו על הדוגמה בקול.\n"
-        "4. רק אז עברו לתרגול."
-    )
+    raw = str(lesson.get("content") or "").strip() or title
+    return organize_to_text(raw, subject=subject_key(subject), topic=topic)

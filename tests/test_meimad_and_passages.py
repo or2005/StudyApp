@@ -8,7 +8,7 @@ if ROOT not in sys.path:
 
 from core.exam_engine import ExamSession
 from core.loader import load_subject
-from core.meimad_exam import PER_SECTION, SECTIONS, build_meimad_exam, can_take_meimad
+from core.meimad_exam import SECTIONS, build_meimad_exam, can_take_meimad, section_count
 from core.quiz import make_question
 
 
@@ -17,10 +17,11 @@ class MeimadExamTests(unittest.TestCase):
         built = build_meimad_exam(load_subject, seed=1)
         self.assertEqual(len(built["chapters"]), 3)
         self.assertEqual([c["key"] for c in built["chapters"]], ["hebrew", "english", "math"])
-        self.assertGreaterEqual(len(built["questions"]), PER_SECTION * 2)
+        self.assertGreaterEqual(len(built["questions"]), section_count('hebrew') * 2)
         for chapter in built["chapters"]:
-            self.assertEqual(chapter["end"] - chapter["start"], PER_SECTION)
-            self.assertEqual(chapter["seconds"], SECTIONS[0][3])
+            self.assertEqual(chapter["end"] - chapter["start"], section_count(chapter["key"]))
+            secs = next(row[3] for row in SECTIONS if row[0] == chapter["key"])
+            self.assertEqual(chapter["seconds"], secs)
 
     def test_skip_stays_inside_chapter(self):
         questions = [
@@ -57,7 +58,26 @@ class MeimadExamTests(unittest.TestCase):
             def get_diagnostic(self):
                 return None
 
+            def get_pref(self, key, default=None):
+                return default
+
         self.assertFalse(can_take_meimad(Empty()))
+
+    def test_unlocked_after_onboarding_intermediate(self):
+        class Ready:
+            def get_diagnostic(self):
+                return None
+
+            def get_pref(self, key, default=None):
+                return {
+                    "onboarding_complete": True,
+                    "preferred_level": "intermediate",
+                }.get(key, default)
+
+            def has_profile(self):
+                return True
+
+        self.assertTrue(can_take_meimad(Ready()))
 
 
 class PassageTests(unittest.TestCase):

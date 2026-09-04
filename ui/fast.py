@@ -171,6 +171,7 @@ class FastScroll(SafeWidget, tk.Frame):
         self._wheel_acc = 0
         self._wheel_bound = False
         self._sync_job = None
+        self._pinned = False
         self.body.bind("<Configure>", self._request_sync)
         self.canvas.bind("<Configure>", self._on_canvas_configure)
         self.bind("<Enter>", lambda _e: self._bind_wheel())
@@ -200,6 +201,9 @@ class FastScroll(SafeWidget, tk.Frame):
         if not widget_alive(self) or not widget_alive(self.canvas):
             return
         try:
+            if getattr(self, "_pinned", False):
+                self._apply_pin_height()
+                return
             self.canvas.configure(scrollregion=self.canvas.bbox("all"))
             self._update_bar()
         except tk.TclError:
@@ -218,7 +222,10 @@ class FastScroll(SafeWidget, tk.Frame):
                 x = 0
             self.canvas.coords(self._window, x, 0)
             self.canvas.itemconfigure(self._window, width=page_w)
-            self._request_sync()
+            if self._pinned:
+                self._apply_pin_height()
+            else:
+                self._request_sync()
         except tk.TclError:
             return
 
@@ -252,6 +259,8 @@ class FastScroll(SafeWidget, tk.Frame):
                 pass
 
     def _wheel(self, event):
+        if getattr(self, "_pinned", False):
+            return "break"
         mark_scrolling()
         steps = 0
         if getattr(event, "num", None) == 4:
@@ -274,6 +283,43 @@ class FastScroll(SafeWidget, tk.Frame):
         if not widget_alive(self) or not widget_alive(getattr(self, "canvas", None)):
             return
         try:
+            self.canvas.yview_moveto(0)
+        except tk.TclError:
+            pass
+
+    def pin_viewport(self, on: bool = True) -> None:
+        """נועל את גובה העמוד לגובה המסך — לתרגול בלי גלילה לתשובות."""
+        self._pinned = bool(on)
+        if not widget_alive(self) or not widget_alive(self.canvas) or not widget_alive(self.body):
+            return
+        try:
+            if not self._pinned:
+                self.body.pack_propagate(True)
+                try:
+                    self.canvas.itemconfigure(self._window, height=0)
+                except tk.TclError:
+                    pass
+                self._request_sync()
+                return
+            self.to_top()
+            self.update_idletasks()
+            height = max(280, int(self.canvas.winfo_height() or 600))
+            self.body.pack_propagate(False)
+            self.body.configure(height=height)
+            self.canvas.itemconfigure(self._window, height=height)
+            self.canvas.configure(scrollregion=(0, 0, 1, height))
+            self.canvas.yview_moveto(0)
+        except tk.TclError:
+            pass
+
+    def _apply_pin_height(self) -> None:
+        if not self._pinned or not widget_alive(self.canvas) or not widget_alive(self.body):
+            return
+        try:
+            height = max(280, int(self.canvas.winfo_height() or 600))
+            self.body.configure(height=height)
+            self.canvas.itemconfigure(self._window, height=height)
+            self.canvas.configure(scrollregion=(0, 0, 1, height))
             self.canvas.yview_moveto(0)
         except tk.TclError:
             pass

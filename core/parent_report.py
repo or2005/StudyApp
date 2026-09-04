@@ -90,9 +90,33 @@ def build_report(storage, insight: str = "") -> dict[str, str]:
     else:
         lines.append("• עדיין אין תרגול שמור.")
 
+    try:
+        from core.learner_prefs import (
+            GOAL_LABELS_HE,
+            exam_goal,
+            level_he as pref_level_he,
+            preferred_level,
+            selected_subjects,
+        )
+
+        prefs_subjects = selected_subjects(storage)
+        lines.extend(
+            [
+                "",
+                "העדפות אחרי הרשמה",
+                f"• רמת התחלה: {pref_level_he(preferred_level(storage))}",
+                f"• יעד: {GOAL_LABELS_HE.get(exam_goal(storage), exam_goal(storage))}",
+                f"• מקצועות שנבחרו: {', '.join(subject_label(k) for k in prefs_subjects)}",
+            ]
+        )
+    except Exception:
+        pass
+
     if diagnostic:
         level = diagnostic.get("level_he") or diagnostic.get("level") or ""
         lines.extend(["", f"אבחון ראשוני: {level}".strip()])
+    elif getattr(storage, "get_pref", lambda *_: None)("diagnostic_skipped"):
+        lines.extend(["", "אבחון ראשוני: דולג"])
 
     lines.extend(["", "נקודות לחיזוק"])
     if weak:

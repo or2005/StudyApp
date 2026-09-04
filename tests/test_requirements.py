@@ -85,7 +85,7 @@ class StudyAppRequirementsTests(unittest.TestCase):
             summary = analytics.get_summary()
             self.assertTrue(overview["has_data"])
             self.assertGreater(overview["accuracy"], 0)
-            self.assertIn("דוח ביצועים כולל", summary)
+            self.assertIn("סיכום ביצועים", summary)
             self.assertTrue(len(analytics.get_recommendations()) >= 1)
             self.assertIn("trend", overview)
             math_row = next(item for item in overview["subject_breakdown"] if item["topic"] == "math")

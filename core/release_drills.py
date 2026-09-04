@@ -42,9 +42,9 @@ def _q(question, correct, wrongs, why, diff="Medium"):
         question,
         str(correct),
         clean[:3],
-        why + " קראו שוב את השאלה, בדקו יחידות, ופסלו מה שלא מתאים.",
+        why,
         diff,
-        "מה בדיוק נשאל, סכום, הפרש, מכפלה או אחוז?",
+        "מה בדיוק נשאל: סכום, הפרש, מכפלה או אחוז?",
     )
 
 

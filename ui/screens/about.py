@@ -40,15 +40,15 @@ class AboutScreen(Page):
         self._footer()
 
     def _hero(self):
-        page_header(self, "אודות", "מי עומד מאחורי התוכנה, איך היא עובדת, ומה חשוב לדעת לפני שמשתמשים.")
-        card = RoundedCard(self, fill=COLORS["banner"], radius=24, padx=20, pady=18)
+        page_header(self, "אודות", "מי עומד מאחורי התוכנה, ואיך היא עובדת אצלכם במחשב.")
+        card = RoundedCard(self, fill=COLORS["card_bg"], radius=14, padx=20, pady=18)
         card.pack(fill="x", pady=(0, 12))
         inner = card.inner
-        ink = COLORS["banner"]
+        ink = COLORS["card_bg"]
         tk.Label(
-            inner, text=rtl("למידה למבחן"), bg=ink,
-            fg=COLORS.get("gold") or COLORS["accent"],
-            font=(ADHD_CONFIG["font_family"], font_size(12), "bold"),
+            inner, text=rtl("לימוד למבחן, בעברית"), bg=ink,
+            fg=COLORS["text_muted"],
+            font=(ADHD_CONFIG["font_family"], font_size(12)),
             anchor="e", justify="right",
         ).pack(fill="x")
         title_row = tk.Frame(inner, bg=ink)
@@ -60,21 +60,21 @@ class AboutScreen(Page):
             tk.Label(title_row, image=logo, bg=ink, bd=0).pack(side="right", padx=(8, 0))
             self._logo_photo = logo
         tk.Label(
-            title_row, text=rtl(APP_NAME), bg=ink, fg=COLORS["banner_text"],
-            font=(ADHD_CONFIG["font_family"], font_size(30), "bold"),
+            title_row, text=rtl(APP_NAME), bg=ink, fg=COLORS["text_main"],
+            font=(ADHD_CONFIG["font_family"], font_size(28), "bold"),
             anchor="e", justify="right",
         ).pack(side="right", fill="x", expand=True)
         tk.Label(
             inner,
-            text=rtl("פלטפורמת למידה בעברית למחשב. שיעורים, תרגול ומבחנים."),
-            bg=ink, fg=COLORS["banner_text"],
+            text=rtl("שיעורים, תרגול ומבחנים על המחשב. בלי חשבון ובלי שרת."),
+            bg=ink, fg=COLORS["text_muted"],
             font=(ADHD_CONFIG["font_family"], font_size(14)),
             anchor="e", justify="right", wraplength=760,
         ).pack(fill="x")
         ver = tk.Label(
             inner,
-            text=rtl(f"גרסה {VERSION}  ·  בלי חשבון  ·  בלי שרת  ·  הכל נשמר אצלך"),
-            bg=ink, fg=COLORS.get("hero_muted") or COLORS["banner_text"],
+            text=rtl(f"גרסה {VERSION} · ההתקדמות נשמרת אצלכם"),
+            bg=ink, fg=COLORS["text_muted"],
             font=(ADHD_CONFIG["font_family"], font_size(13)),
             anchor="e", justify="right",
         )
@@ -146,7 +146,7 @@ class AboutScreen(Page):
         for line in (
             "StudyApp היא תוכנת למידה למחשב, בעברית, בלי צורך באינטרנט אחרי ההתקנה.",
             f"שמונה מקצועות ליבה: {names}.",
-            f"שני מקצועות בחירה: {electives}. כרגע בהכנה, ולא נכנסים למבחן הכללי ולא למימ״ד.",
+            f"מקצועות בחירה: {electives}. לא נכנסים למבחן הכללי ולא למימ״ד.",
             "בכל מקצוע: שיעור עיוני, תרגול עם הסבר, מבחן דמה ומבחן אמיתי לפי הרמה.",
             "יש גם מבחן מימ״ד (עברית, אנגלית וחשבון) ומבחן כללי משולב.",
             "בהגדרות אפשר להפעיל מצב מיקוד, להגדיל טקסט ולהקריא שאלות בקול.",
@@ -193,7 +193,7 @@ class AboutScreen(Page):
             "זה כלי עזר ללמידה ותרגול, לא מבחן רשמי ולא תעודה.",
             "התוכנה אינה קשורה למשרד החינוך, לראמ״ה או למאל״ו.",
             "היא אינה תחליף למורה, לבית ספר, לייעוץ מקצועי או לאבחון רפואי.",
-            "עזרה ראשונה כאן היא חומר לימודי בלבד. היא לא קורס מוסמך ולא מחליפה מד״א, הצלב האדום או AHA.",
+            "תאוריית הנהיגה כאן היא תרגול הכנה. בדקו מול המאגר הרשמי לפני המבחן בלשכה.",
             "הציון באפליקציה משקף את התרגול כאן, לא את הציון בבחינה האמיתית.",
         ):
             fast_label(inner, line, size=14, muted=True, bg=COLORS["card_bg"], wrap=760).pack(fill="x", pady=1)

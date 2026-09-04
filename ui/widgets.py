@@ -9,27 +9,54 @@ from ui.fast import TkButton
 from ui import skin
 
 SUBJECT_ICONS = {
-    "hebrew": "📖",
-    "english": "🌐",
-    "history": "📜",
-    "geography": "🌍",
-    "civics": "🏛",
-    "chemistry": "🧪",
-    "physics": "⚛",
-    "math": "🔢",
-    "arabic": "💬",
-    "first_aid": "✚",
+    "hebrew": "ל",
+    "english": "E",
+    "history": "ה",
+    "geography": "ג",
+    "civics": "א",
+    "chemistry": "כ",
+    "physics": "פ",
+    "math": "מ",
+    "electricity": "ח",
+    "electronics": "ע",
 }
 
 PAD = 20
-GAP = 14
+GAP = 12
 PAGE_WIDTH = 800
-RAIL_WIDTH = 260
-SIDEBAR_WIDTH = 224
+RAIL_WIDTH = 252
+
+
+def content_wrap(widget=None, pad: int = 80) -> int:
+    """רוחב גלישת טקסט לפי החלון — מונע חיתוך במסכים צרים/DPI גבוה."""
+    try:
+        root = widget.winfo_toplevel() if widget is not None else None
+        if root is not None:
+            width = int(root.winfo_width() or 0)
+            if width >= 600:
+                # sidebar ~220–260 + padding
+                return max(340, min(PAGE_WIDTH - 40, width - 300))
+    except Exception:
+        pass
+    return max(340, PAGE_WIDTH - pad)
+
+
+def adapt_page_width(window_width: int) -> int:
+    """מתאים PAGE_WIDTH למסך קטן בלי לשבור לייאאוט קיים."""
+    global PAGE_WIDTH
+    w = int(window_width or 1280)
+    if w < 1100:
+        PAGE_WIDTH = max(520, min(720, w - 260))
+    elif w < 1300:
+        PAGE_WIDTH = 760
+    else:
+        PAGE_WIDTH = 800
+    return PAGE_WIDTH
+SIDEBAR_WIDTH = 220
 RAIL_BREAKPOINT = 1240
-SHADOW_PAD = (0, 4)
-SHADOW_PAD_Y = (0, 5)
-CARD_RADIUS = 24
+SHADOW_PAD = (0, 3)
+SHADOW_PAD_Y = (0, 4)
+CARD_RADIUS = 14
 
 
 def font_size(base: int) -> int:
@@ -275,7 +302,17 @@ class GhostButton(ModernButton):
 class OptionTile(tk.Frame):
     """תשובה כמו בטופס בחינה: אות בריבוע, טקסט לכל הרוחב."""
 
-    def __init__(self, master, letter: str, text: str, command=None, accent: str | None = None):
+    def __init__(
+        self,
+        master,
+        letter: str,
+        text: str,
+        command=None,
+        accent: str | None = None,
+        *,
+        compact: bool = False,
+        wrap: int | None = None,
+    ):
         self._fg = COLORS.get("option_bg") or COLORS["card_bg"]
         self._hover = COLORS.get("option_hover") or COLORS["card_hover"]
         self._text_color = COLORS.get("option_text") or COLORS["text_main"]
@@ -283,7 +320,10 @@ class OptionTile(tk.Frame):
         self._accent = accent or COLORS["primary"]
         self._command = command
         self._state = "normal"
-        height = int(ADHD_CONFIG.get("option_height") or 66)
+        height = 50 if compact else int(ADHD_CONFIG.get("option_height") or 66)
+        label_size = 15 if compact else 17
+        badge_size = 15 if compact else 18
+        wrap_len = wrap if wrap is not None else (300 if compact else 680)
         super().__init__(
             master, bg=self._fg, cursor="hand2",
             highlightthickness=1, highlightbackground=self._border,
@@ -292,18 +332,22 @@ class OptionTile(tk.Frame):
         self.badge = tk.Label(
             self, text=rtl(letter), width=3,
             bg=self._accent, fg=COLORS["text_on_primary"],
-            font=(ADHD_CONFIG["font_family"], font_size(18), "bold"),
+            font=(ADHD_CONFIG["font_family"], font_size(badge_size), "bold"),
         )
         self.badge.pack(side="right", fill="y")
+        pad_y = 6 if compact else 10
         self.label = tk.Label(
             self, text=rtl(text), bg=self._fg, fg=self._text_color,
-            font=(ADHD_CONFIG["font_family"], font_size(17), "bold"),
-            anchor="e", justify="right", padx=14, pady=10, wraplength=680,
+            font=(ADHD_CONFIG["font_family"], font_size(label_size), "bold"),
+            anchor="e", justify="right", padx=10 if compact else 14, pady=pad_y,
+            wraplength=wrap_len,
         )
         self.label.pack(side="right", fill="both", expand=True)
         self.update_idletasks()
         try:
-            need = max(height, int(self.label.winfo_reqheight()) + 8)
+            need = max(height, int(self.label.winfo_reqheight()) + (4 if compact else 8))
+            if compact:
+                need = min(need, 72)
             self.configure(height=need)
             self.pack_propagate(False)
         except tk.TclError:
@@ -395,6 +439,7 @@ class Sidebar(tk.Frame):
         ("dashboard", "nav.home"),
         ("mistakes", "nav.mistakes"),
         ("exams", "nav.exams"),
+        ("ai_assistant", "nav.ai"),
         ("settings", "nav.settings"),
     )
 
@@ -540,7 +585,7 @@ class ContextRail(tk.Frame):
             widget.destroy()
         bg = COLORS["card_bg"]
         tk.Label(
-            self._inner, text=rtl("מצב עכשיו"), bg=bg, fg=COLORS["primary"],
+            self._inner, text=rtl("היום"), bg=bg, fg=COLORS["text_muted"],
             font=(ADHD_CONFIG["font_family"], font_size(12), "bold"), anchor="e",
         ).pack(anchor="e", pady=(0, 6))
 
@@ -588,7 +633,7 @@ class ContextRail(tk.Frame):
         self._metric("הטעויות שלי", str(int(data.get("mistakes", 0) or 0)))
 
         tk.Label(
-            self._inner, text=rtl("דוח ביצועים שבועי"), bg=bg, fg=COLORS["text_main"],
+            self._inner, text=rtl("דוח להורה"), bg=bg, fg=COLORS["text_main"],
             font=(ADHD_CONFIG["font_family"], font_size(13), "bold"), anchor="e",
         ).pack(anchor="e", pady=(14, 8))
         week = data.get("week") or [35, 58, 22, 74, 46]
@@ -691,7 +736,7 @@ class StudioHero(RoundedCard):
 
     def __init__(self, master, name: str, level_he: str, daily: dict | None = None,
                  exam_line: str = "", streak: int = 0, **kwargs):
-        super().__init__(master, fill=COLORS["card_bg"], radius=20, padx=18, pady=14, **kwargs)
+        super().__init__(master, fill=COLORS["card_bg"], radius=CARD_RADIUS, padx=18, pady=14, **kwargs)
         bg = COLORS["card_bg"]
         muted = _c("hero_muted", COLORS["text_muted"])
         inner = self.inner
@@ -701,15 +746,15 @@ class StudioHero(RoundedCard):
         head.pack(fill="x")
         if streak:
             tk.Label(
-                head, text=rtl(f"רצף  {int(streak)}"),
-                bg=COLORS["card_hover"], fg=_c("gold", COLORS["accent"]),
-                font=(ADHD_CONFIG["font_family"], font_size(11), "bold"),
-                padx=10, pady=4,
-            ).pack(side="left", padx=(6, 0), anchor="n")
+                head, text=rtl(f"רצף {int(streak)} ימים"),
+                bg=bg, fg=muted,
+                font=(ADHD_CONFIG["font_family"], font_size(11)),
+                padx=0, pady=2,
+            ).pack(side="left", anchor="n")
         tk.Label(
             head, text=rtl(f"{greeting_he()}, {who}"),
             bg=bg, fg=COLORS["text_main"],
-            font=(ADHD_CONFIG["font_family"], font_size(19), "bold"),
+            font=(ADHD_CONFIG["font_family"], font_size(18), "bold"),
             anchor="e", justify="right",
         ).pack(side="right", fill="x", expand=True)
         tk.Label(
@@ -735,31 +780,42 @@ class StudioHero(RoundedCard):
 
 
 class CompactSubjectTile(RoundedCard):
-    """כרטיס מקצוע נמוך: שם, סטטוס; לחיצה על האריח נכנסת למקצוע."""
+    """כרטיס מקצוע: צבע מקצוע, שם, תיאור קצר והתקדמות."""
 
     def __init__(self, master, subject_key: str, level_he: str, accuracy: float, total: int, on_open,
                  coming_soon: bool = False, **kwargs):
         wash = COLORS["card_hover"] if coming_soon else subject_wash(subject_key)
-        super().__init__(master, fill=wash, radius=14, padx=10, pady=6, shadow=False, **kwargs)
+        super().__init__(master, fill=wash, radius=16, padx=12, pady=10, shadow=False, **kwargs)
         self._on_open = None if coming_soon else on_open
         self._coming_soon = coming_soon
         accent_color = COLORS["text_muted"] if coming_soon else subject_accent(subject_key)
         self.configure(cursor="arrow" if coming_soon else "hand2")
         inner = self.inner
-        name = SUBJECTS.get(subject_key, {}).get("name") or subject_key
+        info = SUBJECTS.get(subject_key, {})
+        name = info.get("name") or subject_key
+        desc = str(info.get("desc") or "").strip()
+        if len(desc) > 52:
+            desc = desc[:49].rstrip() + "…"
         letter = (name[:1] or "?").replace("\u200f", "")
         icon = SUBJECT_ICONS.get(subject_key, letter)
         pct = 0.0 if coming_soon else float(accuracy or 0)
         ink = COLORS["text_muted"] if coming_soon else COLORS["text_main"]
 
-        top = tk.Frame(inner, bg=wash)
+        # פס צבע בצד (RTL: ימין)
+        stripe = tk.Frame(inner, bg=accent_color, width=4)
+        stripe.pack(side="right", fill="y", padx=(8, 0))
+
+        body = tk.Frame(inner, bg=wash)
+        body.pack(side="right", fill="both", expand=True)
+
+        top = tk.Frame(body, bg=wash)
         top.pack(fill="x")
         badge = tk.Label(
             top, text=rtl(icon), bg=accent_color, fg=COLORS["text_on_primary"],
-            font=(ADHD_CONFIG["font_family"], font_size(11)),
-            padx=6, pady=4,
+            font=(ADHD_CONFIG["font_family"], font_size(12)),
+            padx=7, pady=5,
         )
-        photo = skin.circle_photo(badge, 26, accent_color)
+        photo = skin.circle_photo(badge, 30, accent_color)
         if photo is not None:
             badge.configure(image=photo, compound="center", bg=wash)
         badge.pack(side="right")
@@ -773,7 +829,7 @@ class CompactSubjectTile(RoundedCard):
             status = f"{level_he}  ·  טרם תורגל"
         title = tk.Label(
             col, text=rtl(name), bg=wash, fg=ink,
-            font=(ADHD_CONFIG["font_family"], font_size(14), "bold"),
+            font=(ADHD_CONFIG["font_family"], font_size(15), "bold"),
             anchor="e", justify="right",
         )
         title.pack(fill="x")
@@ -783,18 +839,29 @@ class CompactSubjectTile(RoundedCard):
             anchor="e", justify="right",
         )
         meta.pack(fill="x")
+        desc_lbl = None
+        if desc and not coming_soon:
+            desc_lbl = tk.Label(
+                body, text=rtl(desc), bg=wash, fg=COLORS["text_muted"],
+                font=(ADHD_CONFIG["font_family"], font_size(10)),
+                anchor="e", justify="right", wraplength=220,
+            )
+            desc_lbl.pack(fill="x", pady=(4, 0))
 
-        bar = RoundBar(inner, pct=pct / 100, color=accent_color, height=5)
-        bar.pack(fill="x", pady=(5, 4))
+        bar = RoundBar(body, pct=pct / 100, color=accent_color, height=6)
+        bar.pack(fill="x", pady=(8, 2))
 
+        clickable = [self, inner, body, top, col, title, meta, badge, bar, stripe]
+        if desc_lbl is not None:
+            clickable.append(desc_lbl)
         if coming_soon:
             GhostButton(
-                inner, text=rtl("בהכנה"), height=26,
+                body, text=rtl("בהכנה"), height=26,
                 font=(ADHD_CONFIG["font_family"], font_size(12), "bold"),
                 state="disabled",
-            ).pack(fill="x")
+            ).pack(fill="x", pady=(4, 0))
         else:
-            for widget in (self, inner, top, col, title, meta, badge, bar):
+            for widget in clickable:
                 widget.bind("<Button-1>", self._click)
 
     def _click(self, _event=None):
@@ -983,8 +1050,8 @@ def kicker(parent, text: str, bg: str | None = None):
     return tk.Label(
         parent,
         text=rtl(text),
-        font=(ADHD_CONFIG["font_family"], font_size(12), "bold"),
-        fg=COLORS["primary"],
+        font=(ADHD_CONFIG["font_family"], font_size(11)),
+        fg=COLORS["text_muted"],
         bg=bg or bg_of(parent),
         justify="right",
         anchor="e",
@@ -1005,23 +1072,21 @@ def number_pill(parent, text: str):
 
 def section_label(parent, text: str):
     wrap = tk.Frame(parent, bg=bg_of(parent))
-    wrap.pack(anchor="e", fill="x", pady=(16, 8))
-    tk.Frame(wrap, bg=COLORS["primary"], height=2, width=36).pack(
-        side="right", pady=(7, 0), padx=(8, 0),
-    )
+    wrap.pack(anchor="e", fill="x", pady=(14, 6))
     tk.Label(
         wrap, text=rtl(text), bg=bg_of(parent), fg=COLORS["text_muted"],
-        font=(ADHD_CONFIG["font_family"], font_size(13), "bold"),
+        font=(ADHD_CONFIG["font_family"], font_size(12)),
         anchor="e",
     ).pack(side="right")
     return wrap
 
 
-def page_header(parent, title: str, subtitle: str | None = None, size: int = 26):
-    heading(parent, title, size).pack(anchor="e", pady=(4, 4))
-    gold_tick(parent).pack(anchor="e", pady=(0, 8 if subtitle else 20))
+def page_header(parent, title: str, subtitle: str | None = None, size: int = 24):
+    heading(parent, title, size).pack(anchor="e", pady=(4, 2))
     if subtitle:
-        body(parent, subtitle, muted=True, wrap=PAGE_WIDTH - 40).pack(anchor="e", pady=(0, 22))
+        body(parent, subtitle, muted=True, wrap=PAGE_WIDTH - 40).pack(anchor="e", pady=(0, 18))
+    else:
+        tk.Frame(parent, bg=bg_of(parent), height=12).pack()
 
 
 def themed_entry(master, textvariable, **kwargs):

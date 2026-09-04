@@ -76,12 +76,26 @@ def answers_match(typed: str, question: dict | None = None, expected: str = "") 
     compact = got.replace(" ", "")
     if compact in {item.replace(" ", "") for item in norms}:
         return True
+    # סובלנות ליחידות: 3A / 3 אמפר / 3
+    unit = re.compile(
+        r"(?:a|v|w|ω|ohm|amps?|volts?|watts?|אמפר|וולט|אוהם|ואט|קילוואט|kwh|hz|f|h|ma|kω|mω)\s*$",
+        re.I,
+    )
+    got_bare = unit.sub("", compact).strip()
+    for item in norms:
+        bare = unit.sub("", item.replace(" ", "")).strip()
+        if got_bare and bare and got_bare == bare:
+            return True
     got_num = _as_number(typed)
     if got_num is None:
         got_num = _as_number(got)
+    if got_num is None and got_bare:
+        got_num = _as_number(got_bare)
     if got_num is not None:
         for item in list(targets) + list(norms):
             other = _as_number(item)
+            if other is None:
+                other = _as_number(unit.sub("", normalize_answer(item).replace(" ", "")))
             if other is not None and abs(got_num - other) < 1e-9:
                 return True
     got_forms = _he_forms(got)
@@ -160,6 +174,12 @@ def make_compose(
 ) -> dict:
     from core.quiz import polish_explanation
 
+    expl = polish_explanation(answer, explanation, topic, subject).strip()
+    if len(expl) < 40:
+        guide = (write_guide or "").strip() or "כתבו תשובה קצרה ומדויקת."
+        expl = f"{expl} {guide}".strip()
+        if len(expl) < 40:
+            expl = f"{expl} בדקו איות ויחידות לפני השליחה."
     item = {
         "id": qid,
         "subject": subject,
@@ -167,7 +187,7 @@ def make_compose(
         "question": prompt,
         "correct_answer": answer,
         "accepted": accepted or [],
-        "explanation": polish_explanation(answer, explanation, topic, subject),
+        "explanation": expl,
         "difficulty": difficulty,
         "kind": "compose",
         "compose": True,

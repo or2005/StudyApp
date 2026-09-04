@@ -46,6 +46,13 @@ def windows_has_rtl_ui() -> bool:
     return windows_ui_langid() in _RTL_LANG
 
 
+def windows_needs_hebrew_care() -> bool:
+    """ממשק לועזי/רוסי: עברית דורשת הטמעת כיוון, בלי היפוך מילים."""
+    if os.name != "nt":
+        return True
+    return not windows_has_rtl_ui()
+
+
 def set_mode(mode: str) -> str:
     global _MODE
     clean = (mode or "auto").strip().lower()
@@ -55,6 +62,17 @@ def set_mode(mode: str) -> str:
     return _MODE
 
 
+def normalize_saved_mode(saved: str | None) -> str:
+    """מתקן העדפת תצוגה שנתקעה ושוברת מחשבים לועזיים / עבריים."""
+    clean = (saved or "auto").strip().lower()
+    if clean not in {"auto", "words", "letters", "off"}:
+        return "auto"
+    # Windows עברי: «letters» כמעט תמיד נראה הפוך לגמרי
+    if clean == "letters" and windows_has_rtl_ui():
+        return "auto"
+    return clean
+
+
 def get_mode() -> str:
     return _MODE
 
@@ -62,12 +80,9 @@ def get_mode() -> str:
 def resolved_mode() -> str:
     if _MODE in {"words", "letters", "off"}:
         return _MODE
-    if os.name == "nt":
-        return "off" if windows_has_rtl_ui() else "words"
-    loc = (os.environ.get("LANG") or os.environ.get("LC_ALL") or os.environ.get("LC_CTYPE") or "").lower()
-    if loc.startswith("he") or loc.startswith("ar") or ".he" in loc:
-        return "off"
-    return "words"
+    # auto: בלי היפוך מילים. Windows מודרני (גם באנגלית) מצייר עברית נכון עם RLE.
+    # «words» / «letters» נשארים רק לבחירה ידנית במחשב שבאמת שבור.
+    return "off"
 
 
 def configure_for_os() -> str:
@@ -275,13 +290,14 @@ def apply(text: str) -> str:
         if not _HEB.search(cleaned):
             return _DONE + _wrap_latin_runs(cleaned)
         return _DONE + visual_letters(cleaned)
-    if windows_has_rtl_ui():
-        if not _HEB.search(cleaned):
-            return _wrap_latin_runs(cleaned)
+    # off / auto: הטמעת כיוון בלי היפוך מילים — תקין אצל Windows עברי ולועזי מודרני
+    if not _HEB.search(cleaned):
         if _LTR.search(cleaned):
-            return _RLE + _wrap_latin_runs(cleaned) + _PDF
-        return _RLE + cleaned + _PDF
-    return cleaned
+            return _wrap_latin_runs(cleaned)
+        return cleaned
+    if _LTR.search(cleaned):
+        return _RLE + _wrap_latin_runs(cleaned) + _PDF
+    return _RLE + cleaned + _PDF
 
 
 def apply_paragraph(text: str) -> str:

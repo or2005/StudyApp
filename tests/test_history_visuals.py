@@ -20,10 +20,26 @@ class HistoryVisualTests(unittest.TestCase):
         self.assertGreaterEqual(len(self.bank.get("lessons") or []), 20)
         self.assertGreaterEqual(len(self.bank.get("questions") or []), 100)
 
-    def test_coverage_at_least_half(self):
+    def test_coverage_lessons_half_questions_matched(self):
         stats = coverage_stats(self.bank)
         self.assertGreaterEqual(stats["lessons_ratio"], 0.50, stats)
-        self.assertGreaterEqual(stats["questions_ratio"], 0.50, stats)
+        # שאלות: רק התאמה אמיתית, בלי איור אקראי
+        self.assertGreaterEqual(stats["questions_ratio"], 0.15, stats)
+
+    def test_golda_question_gets_state_not_congress(self):
+        from core.illustrations.history import build_visual_for
+
+        visual = build_visual_for(
+            {
+                "question": "מי הייתה ראשת הממשלה הראשונה?",
+                "correct_answer": "גולדה מאיר",
+                "topic": "ציונות ומדינה",
+                "explanation": "גולדה מאיר. הציונות המודרנית ביקשה בית לאומי",
+            }
+        )
+        self.assertIsNotNone(visual)
+        self.assertEqual(visual.get("title"), "מוסדות וחוקים")
+        self.assertNotEqual(visual.get("title"), "ציונות מוסדית")
 
     def test_other_subjects_untouched(self):
         clear_cache()
@@ -46,7 +62,8 @@ class HistoryVisualTests(unittest.TestCase):
     def test_attach_is_idempotent_enough(self):
         again = attach_history_visuals(dict(self.bank))
         stats = coverage_stats(again)
-        self.assertGreaterEqual(stats["questions_ratio"], 0.50)
+        self.assertGreaterEqual(stats["lessons_ratio"], 0.50)
+        self.assertGreaterEqual(stats["questions_ratio"], 0.15)
 
 
 if __name__ == "__main__":

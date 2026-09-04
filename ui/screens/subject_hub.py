@@ -68,8 +68,16 @@ class SubjectHubScreen(Page):
                 side="left", padx=(0, 6)
             )
         else:
+            open_label = {
+                "read": "לקרוא",
+                "compose": "לכתוב",
+                "mock": "מבחן דמה",
+                "final": "מבחן אמיתי",
+                "practice": "לתרגל",
+                "guided": "שיעור",
+            }.get(mode_key, mode.get("name") or "פתיחה")
             GhostButton(
-                row, text=rtl("פתיחה"), width=96, height=38,
+                row, text=rtl(open_label), width=110, height=38,
                 command=lambda k=mode_key: self.on_mode_select(self.subject_key, k),
             ).pack(side="left", padx=(0, 6))
 
@@ -87,13 +95,17 @@ class SubjectHubScreen(Page):
         heading(self, title, 26).pack(anchor="e", pady=(6, 0))
         from ui.widgets import gold_tick
         gold_tick(self).pack(anchor="e", pady=(0, 4))
-        body(self, info.get("desc", ""), muted=True).pack(anchor="e")
 
         snap = self.level_info
         accent = subject_accent(self.subject_key)
+        desc = info.get("desc", "")
+        if desc:
+            hero, hinner = make_card(self, accent=accent, pady=10)
+            hero.pack(fill="x", pady=(4, 6))
+            body(hinner, desc, muted=True).pack(anchor="e")
         if snap:
             banner, inner = make_card(self, accent=accent, pady=12)
-            banner.pack(fill="x", pady=(10, 8))
+            banner.pack(fill="x", pady=(6, 8))
             tk.Label(
                 inner, text=rtl(snap.get("headline", "רמת המקצוע")),
                 bg=COLORS["card_bg"], fg=COLORS["text_main"],
@@ -124,7 +136,7 @@ class SubjectHubScreen(Page):
             note, ninner = make_card(self, accent=COLORS["accent"], pady=10)
             note.pack(fill="x", pady=(0, 10))
             tk.Label(
-                ninner, text=rtl(self.coach.get("title") or "האנליסט"),
+                ninner, text=rtl(self.coach.get("title") or "המלצה"),
                 bg=COLORS["card_bg"], fg=COLORS["text_main"],
                 font=(ADHD_CONFIG["font_family"], font_size(14), "bold"),
                 anchor="e", justify="right",
@@ -139,7 +151,7 @@ class SubjectHubScreen(Page):
             can_final = self.storage.can_take_final(self.subject_key)
 
         progress = float((self.level_info or {}).get("progress") or 0)
-        primary_label = "המשך תרגול" if progress > 0.02 else "בואו נתרגל"
+        primary_label = "המשך תרגול" if progress > 0.02 else "נתחיל לתרגל"
         ModernButton(
             self, text=rtl(primary_label), height=52,
             command=lambda: self.on_mode_select(self.subject_key, "practice"),
@@ -207,7 +219,7 @@ class SubjectHubScreen(Page):
             if row.get("practice"):
                 bits.append(f"{row['practice']} לתרגול")
             if row.get("compose"):
-                bits.append(f"{row['compose']} ליצור")
+                bits.append(f"{row['compose']} לכתיבה")
             fast_label(inner, "  ·  ".join(bits), size=12, muted=True, bg=COLORS["card_bg"]).pack(
                 fill="x", pady=(2, 8)
             )
@@ -223,7 +235,7 @@ class SubjectHubScreen(Page):
                 ).pack(side="right", fill="x", expand=True, padx=(4, 0))
             if row.get("compose"):
                 GhostButton(
-                    btns, text=rtl("יצור"), height=40,
+                    btns, text=rtl("כתיבה"), height=40,
                     command=lambda topic=name: self.on_mode_select(
                         self.subject_key, "compose", topic, True
                     ),

@@ -182,7 +182,14 @@ def build_pyinstaller() -> str:
 
 
 def build_windows() -> str:
+    from core import security_shield
+
     dist_dir = build_pyinstaller()
+    manifest = security_shield.write_manifest(os.path.join(dist_dir, security_shield.MANIFEST_NAME), root=ROOT)
+    # גם ליד exe וגם ב-_internal אם קיים
+    internal = os.path.join(dist_dir, "_internal")
+    if os.path.isdir(internal):
+        shutil.copy2(manifest, os.path.join(internal, security_shield.MANIFEST_NAME))
     _write_text(os.path.join(dist_dir, "קרא אותי.txt"), _windows_readme())
     shutil.copy2(os.path.join(ROOT, "LICENSE"), os.path.join(dist_dir, "LICENSE.txt"))
     shutil.copy2(os.path.join(ROOT, "docs", "TERMS.md"), os.path.join(dist_dir, "תקנון.txt"))
@@ -190,6 +197,7 @@ def build_windows() -> str:
     _zip_dir(dist_dir, zip_path, "StudyApp")
     _copy_to_desktop(zip_path)
     print("WINDOWS", zip_path, f"({os.path.getsize(zip_path) / 1024 / 1024:.1f} MB)")
+    print("integrity manifest:", manifest)
     return zip_path
 
 

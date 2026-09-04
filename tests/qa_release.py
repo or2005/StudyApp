@@ -217,7 +217,10 @@ def main() -> int:
             frame.name_var.set("נועה שחרור")
             frame.age_var.set("16")
             frame.id_var.set("")
+            frame._terms_ok.set(True)
             frame._submit_details()
+            frame.advance_setup_for_tests()
+            frame._stage("diagnostic")
         except Exception as exc:
             bug(f"registration submit failed: {exc}")
             filled = fill_entries(app, ["נועה שחרור", "16", ""])

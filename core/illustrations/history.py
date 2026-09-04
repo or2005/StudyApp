@@ -17,6 +17,14 @@ def _blob(item: dict[str, Any]) -> str:
     )
 
 
+def _question_blob(item: dict[str, Any]) -> str:
+    """רק שאלה+תשובה — הסבר גנרי («הציונות המודרנית…») לא ידביק איור לא קשור."""
+    return " ".join(
+        str(item.get(k) or "")
+        for k in ("question", "correct_answer")
+    )
+
+
 def _stable_bucket(key: str, n: int = 100) -> int:
     digest = hashlib.sha1(key.encode("utf-8")).hexdigest()
     return int(digest[:8], 16) % n
@@ -25,6 +33,18 @@ def _stable_bucket(key: str, n: int = 100) -> int:
 def _match_rule(text: str) -> tuple[str, dict] | None:
     t = text
     rules: list[tuple[tuple[str, ...], str, dict]] = [
+        (("מלחמת העולם השנייה", "מלחמת העולם ה־2", "מלחמת העולם ה-2", "העולם השנייה הסתיימה"), "timeline", {
+            "title": "מלחמת העולם השנייה",
+            "caption": "באירופה: 1939 עד 1945.",
+            "alt": "ציר זמן",
+            "years": ["1939", "1945"],
+        }),
+        (("מלחמת העולם הראשונה", "מלחמת העולם ה־1", "מלחמת העולם ה-1", "העולם הראשונה הסתיימה"), "timeline", {
+            "title": "מלחמת העולם הראשונה",
+            "caption": "1914 עד 1918.",
+            "alt": "ציר זמן",
+            "years": ["1914", "1918"],
+        }),
         (("מגילת", "הכרז", "עצמאות", "הכרזה"), "scroll", {
             "title": "מגילת העצמאות",
             "caption": "מסמך ההכרזה: ערכים ומסגרת, לא חוקה סגורה.",
@@ -38,7 +58,7 @@ def _match_rule(text: str) -> tuple[str, dict] | None:
             "alt": "מסמך הצהרה",
             "years": ["1917"],
         }),
-        (("חלוקה", "181", "או״ם", "אום"), "document", {
+        (("חלוקה", "החלטה 181", "החלטת החלוקה"), "document", {
             "title": "החלטת החלוקה",
             "caption": "1947: החלטה 181 באו״ם.",
             "alt": "מסמך החלטה",
@@ -80,7 +100,7 @@ def _match_rule(text: str) -> tuple[str, dict] | None:
             "caption": "זיכרון השואה והגבורה. לא רק תאריך בלוח.",
             "alt": "נר זיכרון",
         }),
-        (("הרצל", "באזל", "קונגרס", "ציונות", "ז׳בוטינסקי", "בילטמור"), "congress", {
+        (("הרצל", "באזל", "קונגרס", "ז׳בוטינסקי", "בילטמור", "מדינת היהודים", "ציונות מוסדית"), "congress", {
             "title": "ציונות מוסדית",
             "caption": "מקונגרס באזל ועד מוסדות היישוב והמדינה.",
             "alt": "בניין קונגרס",
@@ -108,7 +128,7 @@ def _match_rule(text: str) -> tuple[str, dict] | None:
             "caption": "הקשר הגאוגרפי־מדיני לפני ואחרי 1948.",
             "alt": "מפת סכמה",
         }),
-        (("כנסת", "נשיא", "ממשלה", "חוק השבות", "חוק יסוד", "רשות"), "state", {
+        (("כנסת", "נשיא", "ראש הממשלה", "ראשת הממשלה", "חוק השבות", "חוק יסוד", "רשות"), "state", {
             "title": "מוסדות וחוקים",
             "caption": "רשויות המדינה וחוקים מכוננים כמו חוק השבות.",
             "alt": "שלושה מוסדות",
@@ -127,7 +147,7 @@ def _match_rule(text: str) -> tuple[str, dict] | None:
             "years": ["1948", "1956", "1967"],
             "labels": ["עצמאות", "קדש", "ששת הימים"],
         }),
-        (("ציר זמן", "מאה ה־20", "כרונולוג", "שנה"), "timeline", {
+        (("ציר זמן", "כרונולוג"), "timeline", {
             "title": "ציר זמן",
             "caption": "שנים כעוגנים, לא שינון בלי הקשר.",
             "alt": "ציר זמן",
@@ -141,7 +161,7 @@ def _match_rule(text: str) -> tuple[str, dict] | None:
 
 
 def _fallback_for(item: dict[str, Any], index: int) -> tuple[str, dict]:
-    """המחשות כלליות למילוי כיסוי — עדיין לימודיות, לא קישוט ריק."""
+    """המחשה כללית לשיעורים בלבד — לא לשאלות בודדות."""
     catalog = [
         ("timeline", {
             "title": "ציר זמן היסטורי",
@@ -182,8 +202,19 @@ def _fallback_for(item: dict[str, Any], index: int) -> tuple[str, dict]:
 
 
 def build_visual_for(item: dict[str, Any], *, index: int = 0, force: bool = False) -> dict[str, Any] | None:
-    text = _blob(item)
-    matched = _match_rule(text)
+    # בשאלות: רק לפי טקסט השאלה/תשובה. נושא שיעור לא ידביק איור לא קשור.
+    has_question = bool(str(item.get("question") or "").strip())
+    if has_question:
+        matched = _match_rule(_question_blob(item))
+        if matched is None and not force:
+            return None
+        if matched is None:
+            kind, meta = _fallback_for(item, index)
+        else:
+            kind, meta = matched
+        return make_visual(kind=kind, **meta)
+
+    matched = _match_rule(_blob(item))
     if matched is None and not force:
         return None
     if matched is None:
@@ -200,7 +231,7 @@ def attach_history_visuals(bank: dict[str, Any]) -> dict[str, Any]:
     lessons = [dict(row) for row in (bank.get("lessons") or [])]
     questions = [dict(row) for row in (bank.get("questions") or [])]
 
-    def _apply(rows: list[dict[str, Any]]) -> None:
+    def _apply_lessons(rows: list[dict[str, Any]]) -> None:
         strong: list[int] = []
         weak: list[int] = []
         for i, row in enumerate(rows):
@@ -215,8 +246,17 @@ def attach_history_visuals(bank: dict[str, Any]) -> dict[str, Any]:
         for i in weak_sorted[:need]:
             rows[i][VISUAL_KEY] = build_visual_for(rows[i], index=i, force=True)
 
-    _apply(lessons)
-    _apply(questions)
+    def _apply_questions(rows: list[dict[str, Any]]) -> None:
+        # בשאלות: רק התאמה אמיתית. בלי איור אקראי שמבלבל.
+        for i, row in enumerate(rows):
+            visual = build_visual_for(row, index=i, force=False)
+            if visual:
+                row[VISUAL_KEY] = visual
+            elif VISUAL_KEY in row:
+                row.pop(VISUAL_KEY, None)
+
+    _apply_lessons(lessons)
+    _apply_questions(questions)
     bank["lessons"] = lessons
     bank["questions"] = questions
     return bank

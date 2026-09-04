@@ -88,7 +88,9 @@ class StudioScreen(tk.Frame):
         self._status.pack(anchor="e", pady=(14, 8))
         self._btn(box, "כניסה", self._try_login, GLOW)
         self._btn(box, "חזרה לתוכנה", self._leave, DIM)
-        self.user_var.set("ordadshev")
+        self._line(box, "כניסה למורשים בלבד · ניסיונות כושלים מדווחים", DIM, 10).pack(
+            anchor="e", pady=(10, 0)
+        )
 
     def _field(self, parent, variable, secret=False):
         row = tk.Frame(parent, bg=BG)
@@ -219,13 +221,28 @@ class StudioScreen(tk.Frame):
         self._btn(inner, "טעינת גיבוי תלמיד", lambda: self._run("restore"), GREEN)
         self._btn(inner, "דוח להורה", lambda: self._run("report"), GREEN)
 
+        self._line(inner, "אבטחה ושלמות", AMBER, 12, True).pack(anchor="e", pady=(12, 4))
+        self._btn(inner, "בדיקת שלמות קבצים", lambda: self._run("integrity"), GLOW)
+        self._btn(inner, "יומן מחלקת ביטחון", lambda: self._run("sec_log"), GREEN)
+        self._btn(inner, "בניית מניפסט שלמות", lambda: self._run("seal"), GREEN)
+        self._btn(inner, "נעילת חדר מפתח עכשיו", lambda: self._run("lock_desk"), AMBER)
+
+        self._line(inner, "אנליסט מפתח", AMBER, 12, True).pack(anchor="e", pady=(12, 4))
+        self._btn(inner, "דוח אנליסט עמוק", lambda: self._run("analyst"), GLOW)
+        self._btn(inner, "תחזית מוכנות למבחן", lambda: self._run("exam_ready"), GREEN)
+        self._btn(inner, "סטטוס Ollama / מורה AI", lambda: self._run("ollama"), GLOW)
+        self._btn(inner, "איפוס רמות אנליסט (פרופיל)", lambda: self._run("reset_levels"), AMBER)
+
         self._line(inner, "בדיקות מפתח", AMBER, 12, True).pack(anchor="e", pady=(12, 4))
         self._btn(inner, "העתק סיכום למפתח (להדבקה ב-AI)", self._brief, GLOW)
         self._btn(inner, "דלג על אבחון", lambda: self._run("skip_diag"), AMBER)
         self._btn(inner, "פתח מבחנים בפרופיל הזה", lambda: self._run("unlock"), AMBER)
+        self._btn(inner, "סגירת שערי מבחן", lambda: self._run("relock"), AMBER)
+        self._btn(inner, "הפעלת סריקת בריאות", lambda: self._run("health"), GREEN)
         self._btn(inner, "בדיקת עדכון", lambda: self._run("update"), GREEN)
         self._btn(inner, "יומן אחרון", self._log, GREEN)
         self._btn(inner, "תיקיית יומן", lambda: self._run("logs"), GREEN)
+        self._btn(inner, "הרצת בדיקות אוטומטיות", lambda: self._run("pytest"), DIM)
         self._btn(inner, "בניית התקנה לחלונות", lambda: self._run("build"), DIM)
 
         self._line(inner, "מעבר למקצוע", AMBER, 12, True).pack(anchor="e", pady=(12, 4))

@@ -80,6 +80,18 @@ def main() -> int:
     log = get_logger("main")
 
     try:
+        from core import security_shield
+
+        seal = security_shield.verify()
+        if not seal.get("ok"):
+            log.warning("security seal issues: %s", seal.get("issues"))
+            warn = security_shield.student_warning()
+            if warn and seal.get("frozen"):
+                _show_message("StudyApp · אבטחה", warn, error=False)
+    except Exception:
+        log.exception("security check failed")
+
+    try:
         from ui.app import run
 
         run()

@@ -76,8 +76,8 @@ class StudioLayoutTests(unittest.TestCase):
         self.assertIn("לחיזוק", blob)
         self.assertIn("לשון", blob)
         self.assertIn("הטעויות שלי", blob)
-        self.assertIn("דוח ביצועים שבועי", blob)
-        self.assertLess(blob.find("הטעויות שלי"), blob.find("דוח ביצועים שבועי"))
+        self.assertIn("דוח להורה", blob)
+        self.assertLess(blob.find("הטעויות שלי"), blob.find("דוח להורה"))
 
     def test_dashboard_grid_starts_on_the_right(self):
         from ui.app import StudyApp
@@ -110,14 +110,14 @@ class StudioLayoutTests(unittest.TestCase):
 
         hits = []
         tile = CompactSubjectTile(
-            self.root, "arabic", "מתחיל", 80, 12,
+            self.root, "electricity", "מתחיל", 80, 12,
             on_open=lambda: hits.append("opened"),
             coming_soon=True,
         )
         texts = []
         self._collect_text(tile, texts)
         blob = " ".join(texts)
-        self.assertIn("ערבית", blob)
+        self.assertIn("חשמל", blob)
         self.assertIn("בהכנה", blob)
         self.assertNotIn("הכנס למקצוע", blob)
         tile._click()
@@ -180,8 +180,11 @@ class AppChromeTests(unittest.TestCase):
         self.assertIn("המקצועות שלך", blob)
         self.assertIn("לשון", blob)
         self.assertIn("מתמטיקה", blob)
-        self.assertIn("בקרוב", blob)
-        self.assertIn("ערבית", blob)
+        self.assertIn("מקצועות בחירה", blob)
+        self.assertIn("חשמל", blob)
+        self.assertIn("אלקטרוניקה", blob)
+        self.assertNotIn("ערבית", blob)
+        self.assertNotIn("עזרה ראשונה", blob)
         self.assertNotIn("חשבון וכמותי", blob)
         self.assertNotIn("המשך מאיפה שעצרת", blob)
         self.assertNotIn("דוח להורה", blob)

@@ -1,5 +1,25 @@
 # Changelog
 
+## [5.0.0] - 2026-09-04
+
+### Added
+- First-run flow: registration + terms → subjects → 5 study levels → optional diagnostic (skip allowed)
+- Local AI tutor via Ollama: plain-language paraphrase, step-by-step tutor, silent-gap enrichment
+- Learner prefs: selected subjects, preferred level, exam goal — dashboard follows them
+- Similar-topic drill after a wrong answer
+
+### Updated
+- Adaptive engine: five levels (starter → elite) with legacy beginner mapping
+- Practice help strip: clearer AI actions + live status (connected / off / local)
+- Subject hub: mode buttons say what they open (read / write / mock…); compose renamed to «כתיבה»
+- Settings: AI card explains on/off and connection check
+- Meimad unlock after full onboarding at intermediate+ (or after diagnostic)
+- Parent report includes registration preferences
+
+### Fixed
+- Dashboard no longer requires diagnostic if onboarding was completed with skip
+- Crowded / confusing AI button labels on practice
+
 ## [4.9.0] - 2026-09-04
 
 ### Fixed

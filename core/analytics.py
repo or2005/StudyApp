@@ -289,6 +289,7 @@ class AnalyticsEngine:
         weak = [item for item in weak if item["accuracy"] <= 72][:3]
         recs = list(overview.get("recommendations") or [])
         trend = overview.get("trend") or {}
+        pred = self.predict_exam_score(subject)
         return {
             "has_data": bool(overview.get("has_data")),
             "accuracy": overview.get("accuracy", 0),
@@ -297,13 +298,15 @@ class AnalyticsEngine:
             "weak_topics": [item["topic"] for item in weak],
             "recommendation": recs[0] if recs else "",
             "recommendations": recs[:2],
+            "exam_prediction": pred.get("score"),
+            "exam_label": pred.get("label") or "",
         }
 
     def get_summary(self, subject: str | None = None):
         overview = self.get_overview(subject)
         if not overview["has_data"]:
             return (
-                "📈 אין עדיין מספיק נתונים להפקת דוח.\n"
+                "אין עדיין מספיק נתונים להפקת דוח.\n"
                 "התחל לתרגל או לבצע מבחנים כדי לראות ניתוח ביצועים בזמן אמת!"
             )
 
@@ -333,7 +336,7 @@ class AnalyticsEngine:
         )
 
         return (
-            "📊 דוח ביצועים כולל:\n"
+            "סיכום ביצועים\n"
             "───────────────────────────\n"
             f"• סך הכל שאלות שנענו: {overview['total_questions']}\n"
             f"• תשובות נכונות: {overview['correct_questions']}\n"
@@ -341,9 +344,9 @@ class AnalyticsEngine:
             f"{time_line}"
             f"• זמן לימוד מצטבר: {overview['study_minutes']} דקות\n"
             f"• מגמה: {trend_line}\n\n"
-            "🎯 ניתוח לפי נושאים:\n"
+            "לפי נושאים:\n"
             f"{topic_text}\n\n"
-            "💡 המלצות:\n"
+            "מה כדאי:\n"
             f"{recs_text}"
         )
 
@@ -377,3 +380,65 @@ class AnalyticsEngine:
             return latest.get("timestamp")
         timestamps = [row.get("timestamp") for row in history if row.get("timestamp")]
         return timestamps[-1] if timestamps else None
+
+    def predict_exam_score(self, subject: str | None = None) -> dict:
+        """תחזית גסה לאחוז במבחן, לפי דיוק אחרון + ביטחון נושאים."""
+        history = self._filtered_history(subject)
+        if len(history) < 6:
+            return {
+                "has_data": False,
+                "score": None,
+                "label": "עדיין אין מספיק נתונים לתחזית",
+            }
+        recent = history[-TREND_WINDOW:]
+        acc = sum(1 for row in recent if row["correct"]) / len(recent)
+        breakdown = self.get_subject_breakdown(subject)
+        weak = [
+            item
+            for item in breakdown
+            if item["total_questions"] >= MIN_TOPIC_SAMPLE and item["accuracy"] <= 72
+        ]
+        penalty = min(0.18, 0.04 * len(weak))
+        pace = self._pace_insight(history[-TREND_WINDOW * 2 :])
+        if pace and "מהירים" in pace:
+            penalty += 0.05
+        score = max(0.0, min(100.0, round((acc - penalty) * 100, 1)))
+        if score >= 85:
+            label = "צפוי ציון גבוה, אם שומרים על קצב קריאה"
+        elif score >= 70:
+            label = "צפוי ציון בינוני-גבוה; כדאי לחזק נושא חלש אחד"
+        elif score >= 55:
+            label = "עדיין על הגבול; תרגול ממוקד לפני מבחן"
+        else:
+            label = "מוקדם למבחן; לחזק בסיס קודם"
+        return {"has_data": True, "score": score, "label": label, "weak_count": len(weak)}
+
+    def get_deep_report(self, subject: str | None = None) -> str:
+        """דוח מילולי לחדר מפתח / הורה."""
+        overview = self.get_overview(subject)
+        if not overview.get("has_data"):
+            return "אין עדיין מספיק נתוני ביצועים לדוח עמוק."
+        pred = self.predict_exam_score(subject)
+        lines = [
+            "אנליסט ביצועים (עמוק)",
+            "─" * 28,
+            f"שאלות: {overview['total_questions']} · דיוק: {overview['accuracy']}%",
+            f"מגמה: {(overview.get('trend') or {}).get('label') or 'אין'}",
+        ]
+        if pred.get("has_data"):
+            lines.append(f"תחזית מבחן: {pred['score']}% · {pred['label']}")
+        for rec in (overview.get("recommendations") or [])[:3]:
+            lines.append(f"• {rec}")
+        weak = [
+            item
+            for item in overview.get("subject_breakdown") or []
+            if item.get("total_questions", 0) >= MIN_TOPIC_SAMPLE and item.get("accuracy", 100) <= 72
+        ][:5]
+        if weak:
+            lines.append("נושאים חלשים:")
+            for item in weak:
+                lines.append(
+                    f"  {item['topic']}: {item['accuracy']}% "
+                    f"({item['correct_answers']}/{item['total_questions']})"
+                )
+        return "\n".join(lines)

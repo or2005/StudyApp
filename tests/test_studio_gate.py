@@ -92,11 +92,21 @@ class StudioGateTests(unittest.TestCase):
         self.assertTrue(any(".vscode/settings.json" in name.replace("\\", "/") for name in names))
 
     def test_usb_zip_has_launcher(self):
+        import os as _os
+
         tmp = tempfile.mkdtemp(prefix="studio-usb-")
         with open(os.path.join(tmp, "main.py"), "w", encoding="utf-8") as handle:
             handle.write("print('ok')\n")
         dest = os.path.join(tmp, "StudyApp-USB.zip")
-        write_usb_zip(dest, root=tmp)
+        old = _os.environ.get("STUDYAPP_REQUIRE_EXE")
+        _os.environ["STUDYAPP_REQUIRE_EXE"] = "0"
+        try:
+            write_usb_zip(dest, root=tmp)
+        finally:
+            if old is None:
+                _os.environ.pop("STUDYAPP_REQUIRE_EXE", None)
+            else:
+                _os.environ["STUDYAPP_REQUIRE_EXE"] = old
         names = zipfile.ZipFile(dest).namelist()
         blob = " ".join(names)
         self.assertIn("StudyApp-USB/", blob)

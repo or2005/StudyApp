@@ -202,9 +202,17 @@ def write_usb_zip(dest: str, root: str | None = None) -> str:
                     shutil.copy2(src, target)
             has_exe = os.path.isfile(os.path.join(staging, "StudyApp.exe"))
     if not has_exe:
+        # ברירת מחדל: לא שולחים קוד מקור לתלמיד (הגנה על הקוד).
+        # לפיתוח מקומי: set STUDYAPP_REQUIRE_EXE=0
+        if os.environ.get("STUDYAPP_REQUIRE_EXE", "1") not in {"0", "false", "False"}:
+            shutil.rmtree(staging, ignore_errors=True)
+            raise FileNotFoundError(
+                "לא נמצא StudyApp.exe ב-dist. בנו קודם עם "
+                "python tools/build_release.py --windows ואז חבילת דיסק."
+            )
         for full, rel in _iter_source_files(root):
             target = os.path.join(staging, rel.replace("/", os.sep))
-            os.makedirs(os.path.dirname(target), exist_ok=True)
+            os.makedirs(os.path.dirname(target) or staging, exist_ok=True)
             shutil.copy2(full, target)
     _write_usb_readme(staging, has_exe)
     _write_usb_launcher(staging, has_exe)

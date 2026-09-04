@@ -19,8 +19,7 @@ os.environ["APPDATA"] = TMP
 
 from core import dialogs, rtltext
 
-rtltext.set_mode("words")  # English/Russian Windows, where words used to flip
-
+rtltext.set_mode("auto")  # default: RLE, no word-flip (English Windows friends)
 DIALOGS: list[str] = []
 BUGS: list[str] = []
 NOTES: list[str] = []
@@ -160,9 +159,12 @@ def click_named(root, *needles: str) -> bool:
 
 
 def practice_screen(app):
-    for w in walk(app.content):
-        if isinstance(w, PracticeScreen):
-            return w
+    host = getattr(app, "_practice_host", None)
+    roots = [r for r in (host, app.content) if r is not None]
+    for root in roots:
+        for w in walk(root):
+            if isinstance(w, PracticeScreen):
+                return w
     return None
 
 
@@ -180,6 +182,23 @@ def dump_question(app, where: str) -> dict | None:
     labels = visible_labels(screen)
     blob = "\n".join(labels)
     note(f"{where} Q: {orig[:110]}")
+    if "סבב" in orig or "סבב" in blob:
+        bug(f"{where}: student still sees «סבב» chrome/stem: {orig[:80]}")
+    if re.search(r"מהו\s+ראשת", orig) or re.search(r"מהו\s+ראשת", blob):
+        bug(f"{where}: gender-broken stem still visible: {orig[:80]}")
+    topic = str(q.get("topic") or "")
+    if "סבב" in topic:
+        bug(f"{where}: topic still has סבב after load: {topic[:80]}")
+    try:
+        from core.illustrations.schema import get_visual
+
+        vis = get_visual(q)
+        if vis and vis.get("title") == "ציונות מוסדית":
+            blob_q = f"{orig} {q.get('correct_answer') or ''}"
+            if not any(k in blob_q for k in ("הרצל", "באזל", "קונגרס", "ז׳בוטינסקי", "בילטמור")):
+                bug(f"{where}: congress visual on unrelated Q: {orig[:70]}")
+    except Exception:
+        pass
     en_orig = _EN.findall(orig)
     en_vis = _EN.findall(visual)
     if len(en_orig) >= 3 and en_vis == list(reversed(en_orig)):
@@ -187,9 +206,13 @@ def dump_question(app, where: str) -> dict | None:
     if "She" in orig and "homework" in orig.lower() and "homework. her" in visual.lower():
         bug(f"{where}: mixed English chunk reversed")
     if not screen.exam_mode:
-        if "מה השאלה מבקשת" not in blob:
-            flag(f"{where}: practice question has no task prompt. stem={orig[:70]}")
-        if len(orig) < 14 and "נרדפת" in orig and "קרובה במשמעות" not in blob:
+        from core.teach import needs_task_prompt
+
+        if needs_task_prompt(q) and "מה השאלה מבקשת" not in blob:
+            # task line may be shown without the old prefix
+            if not any(tok in blob for tok in ("השלימו", "קטע", "אנלוגיה", "העריכו", "מצב יצור")):
+                flag(f"{where}: vague practice question missing guidance. stem={orig[:70]}")
+        if len(orig) < 14 and "נרדפת" in orig and "קרובה במשמעות" not in blob and "נרדפת" not in blob:
             flag(f"{where}: short synonym stem not expanded: {orig}")
     inspect_labels(screen, where)
     opts = q.get("options") or []
@@ -411,7 +434,10 @@ def main() -> int:
             frame.name_var.set("נועה בדיקה")
             frame.age_var.set("16")
             frame.id_var.set("")
+            frame._terms_ok.set(True)
             frame._submit_details()
+            frame.advance_setup_for_tests()
+            frame._stage("diagnostic")
         except Exception as exc:
             bug(f"register submit: {exc}")
     pump(app, 120)
