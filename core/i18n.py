@@ -17,7 +17,8 @@ _current = "he"
 # he / en / ru / ar. מפתח קצר, בלי משפטים ארוכים בשאלות.
 STRINGS: dict[str, dict[str, str]] = {
     "nav.home": {"he": "הבית", "en": "Home", "ru": "Главная", "ar": "الرئيسية"},
-    "nav.meimad": {"he": "מבחן מימ״ד", "en": "Meimad exam", "ru": "Экзамен Меимад", "ar": "امتحان ميماد"},
+    "nav.exams": {"he": "מבחנים", "en": "Exams", "ru": "Экзамены", "ar": "امتحانات"},
+    "nav.meimad": {"he": "מבחן מימד", "en": "Meimad exam", "ru": "Экзамен Меимад", "ar": "امتحان ميماد"},
     "nav.general": {"he": "מבחן כללי", "en": "General exam", "ru": "Общий экзамен", "ar": "امتحان عام"},
     "nav.mistakes": {"he": "הטעויות שלי", "en": "My mistakes", "ru": "Мои ошибки", "ar": "أخطائي"},
     "nav.settings": {"he": "הגדרות", "en": "Settings", "ru": "Настройки", "ar": "الإعدادات"},

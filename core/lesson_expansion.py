@@ -90,6 +90,41 @@ def enrich_bank(bank: dict) -> dict:
     for topic, theory, questions, category in learn_packs_for(key):
         _append_ready(bank, topic, theory, questions, category=category)
     try:
+        from core.expand_wave import packs_for as expand_wave_packs_for
+
+        for topic, theory, rows, category in expand_wave_packs_for(key):
+            _append_topic(bank, topic, theory, rows, category=category)
+    except Exception:
+        pass
+    try:
+        from core.expand_wave_b import packs_for as expand_wave_b_packs_for
+
+        for topic, theory, rows, category in expand_wave_b_packs_for(key):
+            _append_topic(bank, topic, theory, rows, category=category)
+    except Exception:
+        pass
+    try:
+        from core.expand_wave_c import packs_for as expand_wave_c_packs_for
+
+        for topic, theory, rows, category in expand_wave_c_packs_for(key):
+            _append_topic(bank, topic, theory, rows, category=category)
+    except Exception:
+        pass
+    try:
+        from core.expand_gentle import packs_for as expand_gentle_packs_for
+
+        for topic, theory, rows, category in expand_gentle_packs_for(key):
+            _append_topic(bank, topic, theory, rows, category=category)
+    except Exception:
+        pass
+    try:
+        from core.expand_wave_d import packs_for as expand_wave_d_packs_for
+
+        for topic, theory, rows, category in expand_wave_d_packs_for(key):
+            _append_topic(bank, topic, theory, rows, category=category)
+    except Exception:
+        pass
+    try:
         from core.theory_enrich import expand_lessons
 
         bank = expand_lessons(key, bank)

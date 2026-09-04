@@ -5,6 +5,21 @@ import re
 from typing import Any
 
 _NUM_LEAD = re.compile(r"^([+-]?(?:\d+\.\d+|\d+))(.*)$")
+_YEAR = re.compile(r"^(1[0-9]{3}|20[0-2][0-9])$")
+
+# מסיחים כלליים שונים זה מזה, רק כשאין מסיחים אמיתיים מהשאלה.
+_GENERIC_DISTRACTORS = (
+    "מסקנה שלא נובעת מהנתונים",
+    "הגדרה של מושג אחר לגמרי",
+    "פרט משני שאינו העיקר כאן",
+    "סיבה ותוצאה הפוכות",
+    "תאריך או מספר שלא מתאים לשאלה",
+    "דוגמה נכונה לשאלה אחרת",
+    "פירוש מילולי בלי קשר להקשר",
+    "תשובה חלקית שמפספסת את העיקר",
+    "הכללה רחבה מדי שלא מדויקת",
+    "נתון שלא מופיע בשאלה",
+)
 
 
 def _leading_number(text: str):
@@ -16,8 +31,30 @@ def _leading_number(text: str):
     return number, suffix
 
 
-def _junk_option(correct: str, text: str, prompt: str = "") -> bool:
-    """מסיח שבור: אות בודדת, או מילה + «ון» במקום תשובה אמיתית."""
+def _norm(text: str) -> str:
+    return " ".join(str(text or "").split()).casefold()
+
+
+def _too_similar(a: str, b: str) -> bool:
+    """דוחים מסיחים כמעט זהים לתשובה או זה לזה."""
+    left, right = _norm(a), _norm(b)
+    if not left or not right:
+        return True
+    if left == right:
+        return True
+    if left in right or right in left:
+        shorter, longer = (left, right) if len(left) <= len(right) else (right, left)
+        if len(shorter) >= 4 and len(longer) - len(shorter) <= 2:
+            return True
+    if abs(len(left) - len(right)) <= 1 and len(left) >= 5:
+        diff = sum(1 for x, y in zip(left, right) if x != y) + abs(len(left) - len(right))
+        if diff <= 1:
+            return True
+    return False
+
+
+def _junk_option(correct: str, text: str, prompt: str = "", siblings: list[str] | None = None) -> bool:
+    """מסיח שבור: אות בודדת, סיומת מזויפת, או מילוי גנרי ממוספר."""
     got = str(text or "").strip()
     want = str(correct or "").strip()
     blob = str(prompt or "")
@@ -25,46 +62,61 @@ def _junk_option(correct: str, text: str, prompt: str = "") -> bool:
         return True
     if got == want:
         return False
+    low = got.lower()
+    if low.startswith("לא נכון (") or "only wrong" in low or got == "גרסה שגויה":
+        return True
+    if got.startswith("אין מספיק מידע ("):
+        return True
     if len(got) == 1 and not got.isdigit():
-        # a / I באנגלית הן תשובות לגיטימיות (תווית).
         if got.lower() in {"a", "i"}:
             return False
         return True
     if got.endswith("ון") and len(got) > 3:
         base = got[:-2]
-        if base == want or (base and base in blob):
+        sibling_norms = {_norm(x) for x in (siblings or [])}
+        if base == want or (base and base in blob) or _norm(base) in sibling_norms:
             return True
     if want and len(want) >= 2 and got == want + want[-1] and " " not in want:
+        return True
+    if _too_similar(want, got):
         return True
     return False
 
 
+def _option_seed(question: dict) -> str:
+    return str(
+        question.get("id")
+        or question.get("question")
+        or question.get("correct_answer")
+        or "studyapp"
+    )
+
+
 def scrub_question(question: dict) -> dict:
-    """מתקן אפשרויות שבורות ומנסח מחדש שאלה קצרה מדי."""
+    """מתקן מסיחים שבורים, דואג ל־4 אפשרויות שונות, ומערבב כדי שהנכון לא יישאר תמיד ב־א׳."""
     item = dict(question)
     opts = [str(x) for x in (item.get("options") or [])]
     idx = item.get("answer")
     correct = str(item.get("correct_answer") or "").strip()
     if not correct and isinstance(idx, int) and 0 <= idx < len(opts):
         correct = opts[idx]
-    if opts:
-        fresh = unique_options(
-            correct,
-            [x for x in opts if x != correct],
-            prompt=str(item.get("question") or ""),
-        )
-        if correct in fresh:
-            item["options"] = fresh
-            item["answer"] = fresh.index(correct)
-            item["correct_answer"] = correct
+    prompt = str(item.get("question") or "")
+    if correct:
+        wrongs = [x for x in opts if str(x).strip() and str(x).strip() != correct]
+        fresh = unique_options(correct, wrongs, prompt=prompt)
+        roller = random.Random(_option_seed(item))
+        roller.shuffle(fresh)
+        item["options"] = fresh
+        item["answer"] = fresh.index(correct)
+        item["correct_answer"] = correct
     from core.teach import clarify_stem
 
     item["question"] = clarify_stem(item)
     return item
 
 
-def suggest_distractors(correct: str) -> list[str]:
-    """מסיחים אמיתיים במקום «לא נכון (1)»: מספרים קרובים, או משפט ברור."""
+def suggest_distractors(correct: str, prompt: str = "") -> list[str]:
+    """מסיחים מגוונים: מספרים קרובים, שנים סבירות, או ניסוחים שונים זה מזה."""
     parsed = _leading_number(correct)
     out: list[str] = []
     if parsed is not None:
@@ -74,57 +126,114 @@ def suggest_distractors(correct: str) -> list[str]:
                 number + 1,
                 number - 1,
                 number + 2,
+                number - 2,
                 number * 2,
                 number // 2 if abs(number) > 1 else number + 3,
                 number + 10,
                 abs(number - 10),
-                0,
-                100,
                 number + max(1, abs(number) // 10),
+                number - max(1, abs(number) // 5) if abs(number) > 5 else number + 5,
             ]
+            if _YEAR.match(str(number)):
+                pool.extend([number + 1, number - 1, number + 10, number - 10, number + 19, number - 30])
             for item in pool:
                 text = f"{item}{suffix}"
                 if text != str(correct):
                     out.append(text)
         else:
-            for item in (number + 1, number - 1, number * 2, number / 2, 0.0):
+            for item in (number + 1, number - 1, number * 2, number / 2, round(number + 0.5, 2), 0.0):
                 text = f"{item:g}{suffix}"
                 if text != str(correct):
                     out.append(text)
     else:
-        out.extend(["לא לפי הנתונים האלה", "אין מספיק מידע בשאלה", "תשובה שלא קשורה לנושא"])
-    seen = {str(correct)}
+        words = [w for w in re.split(r"\s+", str(correct).strip()) if w]
+        if len(words) >= 2:
+            out.append(" ".join(words[1:] + words[:1]))
+            out.append(words[0])
+            if len(words) > 2:
+                out.append(" ".join(words[:-1]))
+        # מסיחים איכותיים ושונים, לא אותה תבנית ממוספרת
+        out.extend(_GENERIC_DISTRACTORS)
+        blob = f"{correct} {prompt}"
+        if any(ch in blob for ch in "אבגדהוזחטיכלמנסעפצקרשת"):
+            out.extend(
+                [
+                    "מילה נרדפת שלא מתאימה להקשר",
+                    "ניגוד במקום התשובה המבוקשת",
+                    "שורש או משפחה של מילה אחרת",
+                ]
+            )
+        if re.search(r"[A-Za-z]", str(correct)):
+            out.extend(
+                [
+                    "a similar word with the wrong meaning",
+                    "the opposite idea in this sentence",
+                    "a grammar form that does not fit",
+                ]
+            )
+    seen = {_norm(correct)}
     clean = []
     for item in out:
         text = str(item).strip()
-        if text and text not in seen:
-            clean.append(text)
-            seen.add(text)
+        key = _norm(text)
+        if not text or key in seen:
+            continue
+        if _too_similar(correct, text):
+            continue
+        clean.append(text)
+        seen.add(key)
     return clean
 
 
 def unique_options(correct: str, wrongs: list[str], prompt: str = "") -> list[str]:
-    seen = {str(correct)}
-    opts = [str(correct)]
-    for item in list(wrongs) + suggest_distractors(correct):
-        text = str(item).strip()
-        if not text or text in seen:
-            continue
-        if text.startswith("לא נכון (") or "only wrong" in text.lower() or text == "גרסה שגויה":
-            continue
-        if _junk_option(str(correct), text, prompt):
-            continue
+    """ארבע אפשרויות שונות באמת: התשובה + שלושה מסיחים מובחנים."""
+    want = str(correct).strip()
+    opts = [want]
+    seen = {_norm(want)}
+    pool = [str(x).strip() for x in list(wrongs) if str(x).strip()]
+
+    def try_add(raw: str) -> bool:
+        text = str(raw or "").strip()
+        key = _norm(text)
+        if not text or key in seen:
+            return False
+        if _junk_option(want, text, prompt, siblings=pool + opts):
+            return False
+        if any(_too_similar(text, existing) for existing in opts):
+            return False
         opts.append(text)
-        seen.add(text)
+        seen.add(key)
+        return True
+
+    for item in pool:
+        try_add(item)
         if len(opts) >= 4:
             break
-    extra = 1
+    if len(opts) < 4:
+        for item in suggest_distractors(want, prompt=prompt):
+            try_add(item)
+            if len(opts) >= 4:
+                break
+    # מילוי אחרון רק באפשרויות שונות במפורש
+    fallback = list(_GENERIC_DISTRACTORS) + [
+        "תשובה שאינה מתאימה לשאלה הזו",
+        "פירוש שגוי של המושג המרכזי",
+        "בחירה שמבלבלת בין שני נושאים קרובים",
+    ]
+    for item in fallback:
+        if len(opts) >= 4:
+            break
+        try_add(item)
+    # אם עדיין חסר (נדיר), מספרים שונים כדי לא לשבור את המבנה
+    n = 1
     while len(opts) < 4:
-        text = f"אין מספיק מידע ({extra})"
-        if text not in seen:
-            opts.append(text)
-            seen.add(text)
-        extra += 1
+        text = f"אפשרות שאינה נכונה כאן ({n})"
+        if try_add(text):
+            n += 1
+        else:
+            n += 1
+            if n > 20:
+                break
     return opts[:4]
 
 

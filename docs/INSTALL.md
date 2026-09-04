@@ -1,4 +1,4 @@
-# התקנה והפצה של StudyApp 4.6.1
+# התקנה והפצה של StudyApp 4.8.0
 
 StudyApp היא תוכנת **דסקטופ**. אין גרסת דפדפן.
 
@@ -6,7 +6,7 @@ StudyApp היא תוכנת **דסקטופ**. אין גרסת דפדפן.
 
 ## Windows 10 / 11: קובץ התקנה (מומלץ)
 
-1. הורידו `StudyApp-4.6.1-setup.exe`.
+1. הורידו `StudyApp-4.8.0-setup.exe`.
 2. לחצו פעמיים, אשרו את האשף, סמנו קיצור לשולחן העבודה אם רוצים.
 3. התוכנה תיפתח מהתפריט Start או מהקיצור.
 
@@ -18,7 +18,7 @@ StudyApp היא תוכנת **דסקטופ**. אין גרסת דפדפן.
 
 ### בלי מתקין: ZIP
 
-1. הורידו `StudyApp-4.6.1-windows.zip`.
+1. הורידו `StudyApp-4.8.0-windows.zip`.
 2. חלצו את **כל** התיקייה.
 3. הפעילו `StudyApp.exe`.
 
@@ -34,7 +34,7 @@ StudyApp היא תוכנת **דסקטופ**. אין גרסת דפדפן.
 powershell -File scripts\build_installer.ps1
 ```
 
-הפלט: `dist\StudyApp-4.6.1-setup.exe` וגם עותק על שולחן העבודה.
+הפלט: `dist\StudyApp-4.8.0-setup.exe` וגם עותק על שולחן העבודה.
 
 אם Inno Setup לא מותקן, הסקריפט מנסה להתקין אותו עם `winget`.
 
@@ -43,7 +43,7 @@ powershell -File scripts\build_installer.ps1
 עובדת על כל ההפצות עם Python 3.10+ ו-Tkinter.
 
 ```
-tar -xzf StudyApp-4.6.1-linux-portable.tar.gz
+tar -xzf StudyApp-4.8.0-linux-portable.tar.gz
 cd StudyApp
 chmod +x StudyApp.sh install.sh
 ./StudyApp.sh

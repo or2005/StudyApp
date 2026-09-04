@@ -1,9 +1,9 @@
 {
-  "version": "4.7.0",
-  "released": "2026-09-03",
-  "notes": "שאלות מנוסחות כמשימה ברורה (זמן, הגדרה, רבים) בלי משפטים הפוכים או מבלבלים. אנגלית וחשבון קריאים ב-Windows לועזי. ההתקדמות בלימוד לא נמחקת.",
-  "windows_setup": "https://github.com/or2005/StudyApp/releases/download/v4.7.0/StudyApp-4.7.0-setup.exe",
-  "windows_zip": "https://github.com/or2005/StudyApp/releases/download/v4.7.0/StudyApp-4.7.0-windows.zip",
-  "linux_portable": "https://github.com/or2005/StudyApp/releases/download/v4.7.0/StudyApp-4.7.0-linux-portable.tar.gz",
-  "page": "https://github.com/or2005/StudyApp/releases/tag/v4.7.0"
+  "version": "4.8.0",
+  "released": "2026-09-04",
+  "notes": "המחשות עם עברית קריאה, ניווט פשוט יותר, מבחן מימד עם הסברים ברורים, וממשק בלי מקפים מבלבלים. ההתקדמות בלימוד לא נמחקת.",
+  "windows_setup": "https://github.com/or2005/StudyApp/releases/download/v4.8.0/StudyApp-4.8.0-setup.exe",
+  "windows_zip": "https://github.com/or2005/StudyApp/releases/download/v4.8.0/StudyApp-4.8.0-windows.zip",
+  "linux_portable": "https://github.com/or2005/StudyApp/releases/download/v4.8.0/StudyApp-4.8.0-linux-portable.tar.gz",
+  "page": "https://github.com/or2005/StudyApp/releases/tag/v4.8.0"
 }

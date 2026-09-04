@@ -113,43 +113,52 @@ class PracticeScreen(Page):
         general = self.session.mode == "general"
         meimad = self.session.mode == "meimad"
         if not self.exam_mode:
-            GhostButton(bar, text=rtl("‹  חזרה"), width=110, command=self.on_back).pack(side="right")
+            GhostButton(bar, text=rtl("‹  חזרה"), width=100, command=self.on_back).pack(side="right")
         elif meimad:
             chapter = self.session.current_chapter() or {}
             idx = self.session.chapter_index()
             total_ch = max(1, len(self.session.chapters))
             fast_label(
                 bar,
-                f"מימ״ד · פרק {idx}/{total_ch}: {chapter.get('name', '')}, בלי חזרה לפרק שנגמר",
+                f"מימד · פרק {idx}/{total_ch}",
                 size=13, bold=True, bg=COLORS["bg"],
             ).pack(side="right", padx=6)
         elif general:
-            fast_label(bar, "מבחן כללי אמריקאי. 50 שאלות, בלי משוב עד הסוף", size=13, bold=True,
-                       bg=COLORS["bg"]).pack(side="right", padx=6)
+            fast_label(bar, "מבחן כללי", size=13, bold=True, bg=COLORS["bg"]).pack(side="right", padx=6)
         elif self.session.mode == "final":
-            fast_label(bar, "מבחן אמיתי. אין חזרה אחורה", size=13, bold=True,
-                       bg=COLORS["bg"]).pack(side="right", padx=6)
+            fast_label(bar, "מבחן אמיתי", size=13, bold=True, bg=COLORS["bg"]).pack(side="right", padx=6)
         else:
-            fast_label(bar, "מבחן דמה. אפשר לדלג ולחזור בסוף", size=13, bold=True,
-                       bg=COLORS["bg"]).pack(side="right", padx=6)
+            fast_label(bar, "מבחן דמה", size=13, bold=True, bg=COLORS["bg"]).pack(side="right", padx=6)
 
         if self.session.can_skip() and self.session.mode not in {"final", "general"}:
-            GhostButton(bar, text=rtl("דלג (S)"), width=110, command=self._skip).pack(side="left", padx=4)
+            GhostButton(bar, text=rtl("דלג (S)"), width=90, command=self._skip).pack(side="left", padx=4)
         if self.speaker is not None and self.speaker.enabled:
             from core.teach import clarify_stem as _say_stem
 
-            GhostButton(bar, text=rtl("🔊 הקראה"), width=120,
-                        command=lambda item=q: self.speaker.say(_say_stem(item))).pack(side="left", padx=4)
+            GhostButton(bar, text=rtl("🔊"), width=56,
+                        command=lambda item=q: self.speaker.say(_say_stem(item))).pack(side="left", padx=2)
         from core.i18n import get_lang, ui as i18n_ui
 
         if get_lang() != "he":
             GhostButton(
-                bar, text=rtl(i18n_ui("btn.explain")), width=180,
+                bar, text=rtl(i18n_ui("btn.explain")), width=140,
                 command=self._explain_helper,
             ).pack(side="left", padx=4)
 
         total = self.session.get_total()
         current = self.session.current_index + 1
+        top = tk.Frame(self, bg=COLORS["bg"])
+        top.pack(fill="x", pady=(6, 0))
+        number_pill(top, f"שאלה {current} / {total}").pack(side="right")
+        if not self.exam_mode:
+            fast_label(
+                top, f"{self.session.score} נכונות",
+                size=12, muted=True, bg=COLORS["bg"],
+            ).pack(side="left", padx=(0, 4))
+
+        self._progress = ProgressBar(self, pct=(current / total) if total else 0, height=7)
+        self._progress.pack(fill="x", pady=(6, 6))
+
         if not self.exam_mode:
             diff = {"Easy": "קל", "Medium": "בינוני", "Hard": "קשה"}.get(
                 str(q.get("difficulty") or ""), str(q.get("difficulty") or "")
@@ -158,26 +167,15 @@ class PracticeScreen(Page):
 
             meta = topic_label(q.get("topic") or "תרגול", q.get("subject") or self.subject_key or "")
             if self.level_he:
-                meta = f"{meta}  ·  רמה {self.level_he}"
+                meta = f"{meta}  ·  {self.level_he}"
             if diff:
                 meta = f"{meta}  ·  {diff}"
-            body(self, meta, muted=True).pack(anchor="e", pady=(8, 2))
-            top = tk.Frame(self, bg=COLORS["bg"])
-            top.pack(fill="x", pady=(2, 0))
-            heading(top, f"{self.session.score} נכונות", 16).pack(side="left")
-            number_pill(top, f"שאלה {current} / {total}").pack(side="right")
-        else:
-            top = tk.Frame(self, bg=COLORS["bg"])
-            top.pack(fill="x", pady=(8, 0))
-            number_pill(top, f"שאלה {current} / {total}").pack(side="right")
-
-        self._progress = ProgressBar(self, pct=(current / total) if total else 0, height=8)
-        self._progress.pack(fill="x", pady=(8, 10))
+            fast_label(self, meta, size=11, muted=True, bg=COLORS["bg"]).pack(anchor="e", pady=(0, 4))
 
         self.timer_lbl = None
         if self.session.time_limit_sec or self.session.total_limit_sec:
-            self.timer_lbl = fast_label(self, "", size=14, muted=True, bg=COLORS["bg"])
-            self.timer_lbl.pack(anchor="e", pady=(0, 6))
+            self.timer_lbl = fast_label(self, "", size=13, muted=True, bg=COLORS["bg"])
+            self.timer_lbl.pack(anchor="e", pady=(0, 4))
             self._tick()
 
         passage = (q.get("passage") or "").strip()
@@ -207,6 +205,17 @@ class PracticeScreen(Page):
         qbox.pack(fill="x", pady=(0, 14))
         from core.teach import clarify_stem, task_prompt
 
+        if not self.exam_mode:
+            try:
+                from core.illustrations.schema import get_visual
+                from ui.visual_panel import VisualPanel
+
+                if get_visual(q):
+                    VisualPanel(qinner, q, mode="question", bg=COLORS["card_bg"], max_width=700).pack(
+                        fill="x", pady=(0, 10),
+                    )
+            except Exception:
+                pass
         stem = clarify_stem(q)
         if compose:
             fast_label(
@@ -234,12 +243,12 @@ class PracticeScreen(Page):
                     text=rtl(f"מה השאלה מבקשת: {task}"),
                     bg=COLORS["card_bg"],
                     fg=COLORS["primary"],
-                    font=(ADHD_CONFIG["font_family"], font_size(15), "bold"),
+                    font=(ADHD_CONFIG["font_family"], font_size(14), "bold"),
                     anchor="e",
                     justify="right",
                     wraplength=720,
-                ).pack(fill="x", pady=(0, 10))
-        heading(qinner, stem, 22).pack(anchor="e")
+                ).pack(fill="x", pady=(0, 8))
+        heading(qinner, stem, 21).pack(anchor="e")
         if self.speaker is not None and self.speaker.enabled:
             spoken = stem
             if not self.exam_mode:
@@ -269,27 +278,29 @@ class PracticeScreen(Page):
                 self._buttons.append(tile)
 
         hints = tk.Frame(self, bg=COLORS["bg"])
-        hints.pack(fill="x", pady=(6, 0))
+        hints.pack(fill="x", pady=(4, 0))
         if not self.exam_mode:
             if compose:
-                hint_line = "כתבו בדיוק מה שמבקשים למעלה, אחר כך בדיקה או Enter"
+                hint_line = "Enter לבדיקה"
             elif latin:
-                hint_line = "מקלדת: A-D או 1-4 לבחירה, Enter להמשך"
+                hint_line = "A–D או 1–4"
             else:
-                hint_line = "מקלדת: 1-4 לבחירה, Enter להמשך"
+                hint_line = "1–4 לבחירה"
             fast_label(
                 hints, hint_line,
-                size=12, muted=True, bg=COLORS["bg"],
+                size=11, muted=True, bg=COLORS["bg"],
             ).pack(side="right")
             from core.teach import live_hint
 
             GhostButton(
-                hints, text=rtl("רמז"), width=100,
+                hints, text=rtl("רמז"), width=72, height=32,
                 command=lambda item=q: self._show_hint(live_hint(item, self.subject_key or "")),
             ).pack(side="left")
             if self.on_report:
-                GhostButton(hints, text=rtl("משהו לא נכון כאן"), width=170,
-                            command=lambda item=q: self._report(item)).pack(side="left", padx=4)
+                GhostButton(
+                    hints, text=rtl("דיווח"), width=72, height=32,
+                    command=lambda item=q: self._report(item),
+                ).pack(side="left", padx=4)
 
         self.feedback = tk.Frame(self, bg=COLORS["bg"])
         self.feedback.pack(fill="x", pady=(10, 0))
@@ -532,6 +543,17 @@ class PracticeScreen(Page):
         fast_label(
             inner, f"הסבר: {explanation}", size=14, bg=COLORS["card_bg"], wrap=720,
         ).pack(anchor="e", pady=(6, 4))
+        if not self.exam_mode:
+            try:
+                from core.illustrations.schema import get_visual
+                from ui.visual_panel import VisualPanel
+
+                if get_visual(q):
+                    VisualPanel(inner, q, mode="explain", bg=COLORS["card_bg"], max_width=680).pack(
+                        fill="x", pady=(4, 8),
+                    )
+            except Exception:
+                pass
         note = feedback_note(q, correct=bool(is_correct), subject=self.subject_key or "")
         if note and note[:40] not in explanation:
             label = "כלל קצר" if is_correct else "שימו לב"

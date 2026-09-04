@@ -64,6 +64,13 @@ def load_subject(subject_key: str) -> dict | None:
         data = expand_lessons(subject_key, data)
     except Exception:
         pass
+    if subject_key == "history":
+        try:
+            from core.illustrations import attach_history_visuals
+
+            data = attach_history_visuals(data)
+        except Exception:
+            pass
     return data
 
 

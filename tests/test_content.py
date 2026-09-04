@@ -114,7 +114,7 @@ class ContentQualityTests(unittest.TestCase):
             total_q += len(bank.get("questions") or [])
             text = json.dumps(bank, ensure_ascii=False, indent=2)
             total_lines += text.count("\n") + 1
-        self.assertGreaterEqual(total_q, 5500, f"questions={total_q}")
+        self.assertGreaterEqual(total_q, 10000, f"questions={total_q}")
         self.assertGreaterEqual(total_lines, 220000, f"json_lines={total_lines} questions={total_q}")
         from core.curriculum import write_all
         from core.loader import clear_cache

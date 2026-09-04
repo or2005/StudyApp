@@ -919,3 +919,11 @@ try:
         COMPOSE_BANK[_key] = list(COMPOSE_BANK.get(_key) or []) + list(_extra)
 except Exception:
     pass
+
+try:
+    from core.compose_wave3 import WAVE3_BANK
+
+    for _key, _extra in WAVE3_BANK.items():
+        COMPOSE_BANK[_key] = list(COMPOSE_BANK.get(_key) or []) + list(_extra)
+except Exception:
+    pass

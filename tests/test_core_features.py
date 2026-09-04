@@ -281,6 +281,29 @@ class AdaptiveEngineTests(unittest.TestCase):
         adv = filter_lessons(lessons, "advanced", qs)
         self.assertEqual([x["id"] for x in adv], ["a", "b", "c"])
 
+    def test_lessons_sorted_by_number(self):
+        from core.adaptive_engine import filter_lessons, sort_lessons
+
+        lessons = [
+            {"id": "hebrew_lesson_30", "title": "30. כתיב", "category": "שיעור עיוני", "topic": "כתיב"},
+            {"id": "hebrew_lesson_2", "title": "2. מילים", "category": "שיעור עיוני", "topic": "מילים"},
+            {"id": "hebrew_lesson_10", "title": "10. פיסוק", "category": "שיעור עיוני", "topic": "פיסוק"},
+            {"id": "hebrew_lesson_1", "title": "1. בסיס", "category": "שיעור עיוני", "topic": "בסיס"},
+        ]
+        ordered = sort_lessons(lessons)
+        self.assertEqual([x["title"].split(".", 1)[0] for x in ordered], ["1", "2", "10", "30"])
+        filtered = filter_lessons(lessons, "beginner", None)
+        self.assertEqual([x["id"] for x in filtered], [
+            "hebrew_lesson_1", "hebrew_lesson_2", "hebrew_lesson_10", "hebrew_lesson_30",
+        ])
+
+    def test_practice_order_is_easy_to_hard(self):
+        from core.adaptive_engine import mix_for, pick_by_mix, normalize_difficulty
+
+        picked = pick_by_mix(self._pool(), mix_for("advanced"), 15, rng=__import__("random").Random(9))
+        ranks = [{"Easy": 0, "Medium": 1, "Hard": 2}[normalize_difficulty(q["difficulty"])] for q in picked]
+        self.assertEqual(ranks, sorted(ranks))
+
     def test_rushed_near_miss_does_not_promote(self):
         event = None
         for i in range(8):

@@ -1,5 +1,17 @@
 # Changelog
 
+## [4.8.0] - 2026-09-04
+
+### Fixed
+- Hebrew text inside history illustrations no longer appears reversed
+- Exam cards: clearer Meimad/general copy without RTL gibberish
+- Removed em-dash «AI style» phrasing from student-facing illustration captions
+
+### Updated
+- Navigation: Home, Mistakes, Exams, Settings (About as a quiet link)
+- Home: greeting by time of day, «מה עכשיו», quieter electives note
+- Subject hub: primary practice CTA and grouped secondary modes
+
 ## [4.7.0] - 2026-09-03
 
 ### Fixed

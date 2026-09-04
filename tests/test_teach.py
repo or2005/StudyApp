@@ -102,6 +102,7 @@ class TeachTests(unittest.TestCase):
 
         item = scrub_question(
             {
+                "id": "scrub-demo-1",
                 "question": "הניגוד של «כהה»",
                 "correct_answer": "בהיר",
                 "options": ["בהיר", "כההון", "ב", "צבע"],
@@ -112,6 +113,41 @@ class TeachTests(unittest.TestCase):
         self.assertNotIn("ב", item["options"])
         self.assertIn("בהיר", item["options"])
         self.assertEqual(len(item["options"]), 4)
+        self.assertEqual(len(set(item["options"])), 4)
+        self.assertEqual(item["options"][item["answer"]], "בהיר")
+
+    def test_scrub_does_not_pin_correct_to_first_option(self):
+        from collections import Counter
+
+        from core.quiz import scrub_question
+
+        answers = Counter()
+        for i in range(40):
+            item = scrub_question(
+                {
+                    "id": f"pin-{i}",
+                    "question": f"שאלה לדוגמה {i}",
+                    "correct_answer": "נכון",
+                    "options": ["נכון", "שגוי א", "שגוי ב", "שגוי ג"],
+                    "answer": 0,
+                }
+            )
+            answers[item["answer"]] += 1
+            self.assertEqual(item["options"][item["answer"]], "נכון")
+            self.assertEqual(len(set(item["options"])), 4)
+        self.assertGreaterEqual(len(answers), 3)
+        self.assertLess(answers[0], 40)
+
+    def test_unique_options_are_distinct(self):
+        from core.quiz import unique_options
+
+        opts = unique_options("שקט", ["שקט", "רעש", "רעשון", "ק"], prompt="ניגוד")
+        self.assertEqual(len(opts), 4)
+        self.assertEqual(len(set(opts)), 4)
+        self.assertIn("שקט", opts)
+        self.assertNotIn("רעשון", opts)
+        blob = " ".join(opts)
+        self.assertNotIn("אין מספיק מידע (", blob)
 
     def test_clarify_stem_expands_short_synonym(self):
         self.assertEqual(

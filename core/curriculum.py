@@ -37,13 +37,24 @@ def build_all() -> dict[str, dict]:
     return {key: enrich_bank(builder()) for key, builder in BUILDERS.items()}
 
 
+def _scrub_ai_dashes(value):
+    """מקפי AI (em/en) אסורים במאגר; מחליפים במקף עברי מותר."""
+    if isinstance(value, str):
+        return value.replace("\u2014", "־").replace("\u2013", "־")
+    if isinstance(value, list):
+        return [_scrub_ai_dashes(item) for item in value]
+    if isinstance(value, dict):
+        return {key: _scrub_ai_dashes(item) for key, item in value.items()}
+    return value
+
+
 def write_subjects(keys: list[str] | None = None) -> list[tuple[str, int, int]]:
     Path(QUESTIONS_DIR).mkdir(parents=True, exist_ok=True)
     chosen = list(keys) if keys else list(BUILDERS)
     written = []
     for key in chosen:
         builder = BUILDERS[key]
-        data = enrich_bank(builder())
+        data = _scrub_ai_dashes(enrich_bank(builder()))
         path = Path(QUESTIONS_DIR) / f"{key}.json"
         with path.open("w", encoding="utf-8") as handle:
             json.dump(data, handle, ensure_ascii=False, indent=2)

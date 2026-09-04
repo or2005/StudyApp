@@ -1,22 +1,18 @@
-# StudyApp, Release Notes 4.7.0
+# StudyApp, Release Notes 4.8.0
 
 ## Overview
 StudyApp is a Hebrew-first **desktop** study app.
 
 ## Downloads
-- Windows: `StudyApp-4.7.0-setup.exe` or `StudyApp-4.7.0-windows.zip`
-- Linux: `StudyApp-4.7.0-linux-portable.tar.gz`
+- Windows: `StudyApp-4.8.0-setup.exe` or `StudyApp-4.8.0-windows.zip`
+- Linux: `StudyApp-4.8.0-linux-portable.tar.gz`
 
 ## What's new
-- Confusing fragments rewritten as real questions (tense, definitions, plurals, English phrases)
-- Questions are written as full tasks, not fragments such as «נרדפת למהיר» or «APPLE זה»
-- «מים» and similar words are no longer skipped as if they were already a question
-- Percent and definition prompts read as «כמה הם…» / «מהו…», not backwards Hebrew
-- English and math stay readable on English Windows (no flipped punctuation or scrambled formulas)
-- Practice shows what the question is asking before the student picks an answer
-- Dummy options like «כההון» are gone
-- Meimad passages are fully visible
-- After a lesson, practice is a short drill on that topic only
+- History illustrations show readable Hebrew (no reversed captions)
+- Clearer memorial candle visual; softer captions without AI-style dashes
+- Home and sidebar: one next step, exams under one menu, human wording
+- Meimad exam card labeled «מבחן מימד» with short clear lines
+- Progress is never wiped by an update
 
 ## License
 MIT License. Copyright (c) 2026 Or Dadshaev.

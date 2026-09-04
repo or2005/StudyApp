@@ -15,7 +15,7 @@ except ModuleNotFoundError as exc:
     ) from exc
 
 from core import applog, dialogs, i18n, studio_brief, theme
-from core.adaptive_engine import LEVEL_HE, AdaptiveEngine, session_params
+from core.adaptive_engine import LEVEL_HE, AdaptiveEngine, session_params, sort_lessons
 from core.analytics import AnalyticsEngine
 from core.config import (
     ADHD_CONFIG,
@@ -23,7 +23,6 @@ from core.config import (
     COLORS,
     FONT_STEPS,
     ALL_SUBJECTS,
-    ELECTIVE_SUBJECTS,
     HOME_SUBJECTS,
     ICON_PATH,
     ICON_PNG_PATH,
@@ -44,6 +43,7 @@ from core.general_exam import (
     unlock_progress,
 )
 from core.loader import load_subject
+from core.next_action import pick_next_action
 from core.meimad_exam import (
     SECTIONS,
     build_meimad_exam,
@@ -323,6 +323,8 @@ class StudyApp(ctk.CTk):
                 self._show_dashboard()
             elif key == "subjects":
                 self._show_dashboard()
+            elif key == "exams":
+                self._show_exams_hub()
             elif key == "meimad":
                 self._show_meimad_hub()
             elif key == "general_exam":
@@ -531,7 +533,7 @@ class StudyApp(ctk.CTk):
             self.rail = ContextRail(self, on_weak=self._open_weak_from_rail)
             self._chrome_state = None
             self._apply_chrome(refresh=True)
-            self._nav(tab if tab in {"dashboard", "subjects", "meimad", "general_exam", "mistakes", "settings", "about", "studio"} else "dashboard")
+            self._nav(tab if tab in {"dashboard", "subjects", "exams", "meimad", "general_exam", "mistakes", "settings", "about", "studio"} else "dashboard")
         finally:
             self._rebuilding = False
 
@@ -801,7 +803,7 @@ class StudyApp(ctk.CTk):
         widget.grid(row=row, column=columns - 1 - offset, sticky="nsew", padx=padx, pady=pady)
 
     def _show_dashboard(self):
-        """הבית: ברכה וקיצור למקצועות, בלי כרטיס צעד ובלי עמודת סטטיסטיקה."""
+        """הבית: ברכה, צעד הבא, ואריחי מקצוע."""
         self.active_tab = "dashboard"
         self._show_chrome()
         try:
@@ -826,15 +828,32 @@ class StudyApp(ctk.CTk):
         ).pack(fill="x", pady=(0, 10))
         self._pack_update_card(self.content)
 
-        heading(self.content, "מקצועות", 15).pack(anchor="e", pady=(2, 4))
+        weak = self._live_weak_subjects()
+        unpracticed = None
+        for key in HOME_SUBJECTS:
+            if key not in SUBJECTS or is_coming_soon(key):
+                continue
+            info = mastery.get(key) or {}
+            if int(info.get("total") or 0) <= 0:
+                unpracticed = key
+                break
+        nxt = pick_next_action(
+            has_saved=bool(self.session_store.load()),
+            due_now=self.srs.due_count(),
+            mistakes=len(self.storage.get_mistakes()),
+            weak_keys=weak,
+            unpracticed_key=unpracticed,
+            review_batch=REVIEW_BATCH,
+        )
+        self._pack_next_action(nxt)
+
+        heading(self.content, "המקצועות שלך", 15).pack(anchor="e", pady=(2, 4))
         self._pack_subject_grid(mastery, HOME_SUBJECTS)
-        heading(self.content, "מקצועות בחירה", 15).pack(anchor="e", pady=(10, 2))
         body(
             self.content,
-            "ערבית ועזרה ראשונה בהכנה. מופיעים כאן, עדיין אי אפשר להיכנס.",
+            "בקרוב גם ערבית ועזרה ראשונה.",
             muted=True,
-        ).pack(anchor="e", pady=(0, 4))
-        self._pack_subject_grid(mastery, ELECTIVE_SUBJECTS)
+        ).pack(anchor="e", pady=(12, 4))
 
     def _pack_subject_grid(self, mastery: dict, keys: list[str]):
         grid = tk.Frame(self.content, bg=COLORS["bg"])
@@ -861,10 +880,10 @@ class StudyApp(ctk.CTk):
             detail = f"{detail}\n{note}".strip()
         StartLessonCard(
             self.content,
-            kicker_text="הצעד הבא",
-            title=nxt.get("title") or "למקצועות",
+            kicker_text="מה עכשיו",
+            title=nxt.get("title") or "מה בא לך היום?",
             detail=detail,
-            button=nxt.get("title") or "המשך",
+            button=nxt.get("cta") or nxt.get("title") or "מתחילים",
             command=lambda: self._run_next_action(nxt),
         ).pack(fill="x", pady=(0, 14))
 
@@ -1252,32 +1271,52 @@ class StudyApp(ctk.CTk):
             thick=2,
         )
         card.pack(fill="x", pady=(0, 12))
-        kicker(inner, "מימ״ד", bg=COLORS["card_bg"]).pack(anchor="e")
-        heading(inner, "ישיבת מימ״ד מלאה", 18).pack(anchor="e", pady=(2, 0))
+        kicker(inner, "מבחן מימד", bg=COLORS["card_bg"]).pack(anchor="e")
+        heading(inner, "ישיבה מלאה בשלושה פרקים", 18).pack(anchor="e", pady=(2, 0))
+        # שורות קצרות — משפט ארוך עם מספרים מתהפך ב־RTL ונראה ג'יבריש
         fast_label(
-            inner,
-            f"ישיבה בסגנון מאל״ו: {describe_sitting()}. "
-            f"{sitting_minutes()} דקות סה״כ. כשנגמר הזמן לפרק, עוברים אוטומטית לבא.",
-            size=13, muted=True, bg=COLORS["card_bg"], wrap=780,
-        ).pack(anchor="e", pady=(4, 6))
-        if last.get("percent") is not None:
-            parts = " · ".join(
-                f"{row.get('name')}: {row.get('percent')}%"
-                for row in (last.get("chapters") or [])
-            )
+            inner, "מילולי, אנגלית וחשבון. שעון נפרד לכל פרק.",
+            size=13, muted=True, bg=COLORS["card_bg"], wrap=720,
+        ).pack(anchor="e", pady=(6, 2))
+        for _key, name, count, seconds in SECTIONS:
+            short = name.split(",")[0].strip()
             fast_label(
                 inner,
-                f"ישיבה אחרונה: {last.get('percent')}%  ·  {parts}  ({last.get('date', '')})",
-                size=13, muted=True, bg=COLORS["card_bg"], wrap=780,
+                f"{short}: {count} שאלות, {seconds // 60} דקות",
+                size=12, muted=True, bg=COLORS["card_bg"], wrap=720,
+            ).pack(anchor="e")
+        fast_label(
+            inner,
+            f"ביחד כ־{sitting_minutes()} דקות. נגמר הזמן בפרק, עוברים הלאה.",
+            size=12, muted=True, bg=COLORS["card_bg"], wrap=720,
+        ).pack(anchor="e", pady=(4, 6))
+        if last.get("percent") is not None:
+            fast_label(
+                inner,
+                f"ישיבה אחרונה: {last.get('percent')}% ({last.get('date', '')})",
+                size=12, muted=True, bg=COLORS["card_bg"], wrap=720,
             ).pack(anchor="e", pady=(0, 8))
         btns = tk.Frame(inner, bg=COLORS["card_bg"])
         btns.pack(fill="x", pady=(2, 0))
         if unlocked:
-            ModernButton(btns, text=rtl("לישיבת מימ״ד"), width=180,
+            ModernButton(btns, text=rtl("למבחן מימד"), width=180,
                          command=lambda: self._nav("meimad")).pack(side="right", padx=4)
         else:
-            GhostButton(btns, text=rtl("נעול. סיימו אבחון"), width=200,
+            GhostButton(btns, text=rtl("נעול. קודם אבחון"), width=200,
                         command=lambda: self._nav("dashboard")).pack(side="right", padx=4)
+
+    def _show_exams_hub(self):
+        self.active_tab = "exams"
+        self._show_chrome()
+        self._clear()
+        self._set_window_title("מבחנים")
+        page_header(
+            self.content,
+            "מבחנים",
+            "לישיבה ארוכה, כשאתם מוכנים. ליום־יום עדיף לחזור למקצוע.",
+        )
+        self._pack_meimad_card(self.content)
+        self._pack_general_exam_card(self.content)
 
     def _show_meimad_hub(self):
         self.active_tab = "meimad"
@@ -1285,8 +1324,8 @@ class StudyApp(ctk.CTk):
         self._clear()
         page_header(
             self.content,
-            "מבחן מימ״ד",
-            "ישיבה מלאה בסגנון מאל״ו: פרק מילולי, פרק אנגלית ופרק כמותי. שעון לכל פרק, הציון בסוף.",
+            "מבחן מימד",
+            "מילולי, אנגלית וחשבון. שעון לכל פרק, ציון בסוף.",
         )
 
         for key, name, count, seconds in SECTIONS:
@@ -1353,26 +1392,46 @@ class StudyApp(ctk.CTk):
         if last:
             fast_label(
                 inner,
-                f"דוח אחרון: {last.get('percent')}%  ·  Grade {last.get('grade')}  ·  "
-                f"Scaled {last.get('scaled')}  ·  רמה {last.get('level_he')}  ({last.get('date', '')})",
-                size=13, muted=True, bg=COLORS["card_bg"], wrap=780,
-            ).pack(anchor="e", pady=(4, 4))
+                f"דוח אחרון: {last.get('percent')}% · רמה {last.get('level_he')} ({last.get('date', '')})",
+                size=12, muted=True, bg=COLORS["card_bg"], wrap=720,
+            ).pack(anchor="e", pady=(4, 2))
         if unlocked:
             fast_label(
-                inner,
-                "50 שאלות רב־ברירה (A-D) מכל המקצועות. בלי הסבר באמצע, 50 דקות, ובסוף דוח רמה מפורט.",
-                size=13, muted=True, bg=COLORS["card_bg"], wrap=780,
+                inner, "מכל המקצועות, בלי הסבר באמצע.",
+                size=13, muted=True, bg=COLORS["card_bg"], wrap=720,
+            ).pack(anchor="e", pady=(6, 2))
+            fast_label(
+                inner, "50 דקות, ובסוף דוח רמה.",
+                size=12, muted=True, bg=COLORS["card_bg"], wrap=720,
             ).pack(anchor="e", pady=(0, 8))
         else:
-            missing = " · ".join(status.get("missing") or [])
+            ready = status.get("ready_subjects") or 0
+            total = status.get("total_subjects") or 0
             fast_label(
-                inner,
-                f"נעול. תרגלו לפחות 50% מכל מקצוע (כ־20 שאלות ייחודיות בכל אחד). "
-                f"מוכן: {status.get('ready_subjects')}/{status.get('total_subjects')}. חסר: {missing}",
-                size=13, muted=True, bg=COLORS["card_bg"], wrap=780,
-            ).pack(anchor="e", pady=(0, 8))
+                inner, "עדיין נעול.",
+                size=13, muted=True, bg=COLORS["card_bg"], wrap=720,
+            ).pack(anchor="e", pady=(6, 2))
+            fast_label(
+                inner, "פותחים אחרי תרגול בכל מקצוע (בערך 20 שאלות בכל אחד).",
+                size=12, muted=True, bg=COLORS["card_bg"], wrap=720,
+            ).pack(anchor="e", pady=(0, 2))
+            fast_label(
+                inner, f"מוכנים: {ready} מתוך {total}.",
+                size=12, muted=True, bg=COLORS["card_bg"], wrap=720,
+            ).pack(anchor="e", pady=(0, 2))
+            missing = [str(n) for n in (status.get("missing") or [])]
+            if missing:
+                fast_label(
+                    inner, "חסר: " + ", ".join(missing[:4]),
+                    size=12, muted=True, bg=COLORS["card_bg"], wrap=720,
+                ).pack(anchor="e", pady=(0, 2 if len(missing) > 4 else 8))
+                if len(missing) > 4:
+                    fast_label(
+                        inner, ", ".join(missing[4:]),
+                        size=12, muted=True, bg=COLORS["card_bg"], wrap=720,
+                    ).pack(anchor="e", pady=(0, 8))
         btns = tk.Frame(inner, bg=COLORS["card_bg"])
-        btns.pack(fill="x")
+        btns.pack(fill="x", pady=(4, 0))
         ModernButton(
             btns, text=rtl("למבחן הכללי"), width=180,
             command=lambda: self._nav("general_exam"),
@@ -2049,18 +2108,10 @@ class StudyApp(ctk.CTk):
         ).pack(anchor="e", pady=(0, 8))
         listing = tk.Frame(self.content, bg=COLORS["bg"])
         listing.pack(fill="both", expand=True)
-        weak = set(self.adaptive_engine.weak_topics(subject))
-
-        def _lesson_rank(item):
-            done = 1 if self.storage.is_lesson_complete(str(item.get("id"))) else 0
-            topic_name = str(item.get("topic") or "")
-            weak_hit = 0 if topic_name in weak else 1
-            return (done, weak_hit, random.random())
-
-        display = sorted(lessons, key=_lesson_rank)
+        display = sort_lessons(lessons)
         body(
             self.content,
-            "קודם שיעורים שטרם סיימתם, ואחר כך נושאים שבהם טעיתם. תרגול על שיעור הוא קצר ורק על אותו נושא.",
+            "השיעורים מסודרים לפי מספר: מ־1 (בסיס) והלאה לרמה גבוהה יותר. תרגול על שיעור הוא קצר ורק על אותו נושא.",
             muted=True,
         ).pack(anchor="e", pady=(0, 8))
         for lesson in display:
@@ -2083,7 +2134,7 @@ class StudyApp(ctk.CTk):
                 (item for item in (data.get("lessons") or []) if str(item.get("id")) == str(lesson_id)),
                 None,
             )
-            lessons = data.get("lessons") or []
+            lessons = sort_lessons(data.get("lessons") or [])
         if not lesson:
             dialogs.info("מידע", "השיעור לא נמצא.")
             return

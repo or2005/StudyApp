@@ -32,6 +32,16 @@ class LessonScreen(Page):
         )
         card.pack(fill="x", pady=(0, 12))
         tk.Frame(card, bg=COLORS.get("gold") or COLORS["accent"], height=3).pack(fill="x")
+        try:
+            from core.illustrations.schema import get_visual
+            from ui.visual_panel import VisualPanel
+
+            if get_visual(lesson):
+                VisualPanel(card, lesson, mode="lesson", bg=COLORS["card_bg"], max_width=720).pack(
+                    fill="x", padx=10, pady=(10, 4),
+                )
+        except Exception:
+            pass
         content = lesson.get("content", "") or ""
         reader = FastText(card, height=min(36, 12 + content.count("\n") // 2))
         reader.pack(fill="x", padx=4, pady=4)

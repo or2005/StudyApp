@@ -7,10 +7,15 @@
 from __future__ import annotations
 
 import random
+import re
 import time
 from typing import Any
 
 from core.config import subject_key, subject_label
+
+_LESSON_NUM_TITLE = re.compile(r"^\s*(\d+)\s*[\.\)]\s*")
+_LESSON_NUM_ID = re.compile(r"(\d+)\s*$")
+_DIFF_ORDER = {"Easy": 0, "Medium": 1, "Hard": 2}
 
 LEVELS = ("beginner", "intermediate", "advanced")
 LEVEL_HE = {"beginner": "מתחיל", "intermediate": "בינוני", "advanced": "מתקדם"}
@@ -100,6 +105,34 @@ def normalize_difficulty(raw: Any) -> str:
     if text in {"Easy", "Medium", "Hard"}:
         return text
     return _DIFF_ALIASES.get(text.lower(), _DIFF_ALIASES.get(text, "Easy"))
+
+
+def lesson_sort_key(lesson: dict) -> tuple:
+    """מספר שיעור מהכותרת (1. נושא) או מהמזהה — לסדר בסיס → בינוני → קשה."""
+    title = str(lesson.get("title") or "")
+    match = _LESSON_NUM_TITLE.match(title)
+    if match:
+        return (0, int(match.group(1)), title)
+    match = _LESSON_NUM_ID.search(str(lesson.get("id") or ""))
+    if match:
+        return (1, int(match.group(1)), title)
+    return (2, 10**9, title)
+
+
+def sort_lessons(lessons: list[dict]) -> list[dict]:
+    return sorted(lessons, key=lesson_sort_key)
+
+
+def sort_questions_progressive(questions: list[dict]) -> list[dict]:
+    """קל → בינוני → קשה, כדי שהתרגול יתחיל מבסיס ויתקדם."""
+    return sorted(
+        questions,
+        key=lambda q: (
+            _DIFF_ORDER.get(normalize_difficulty(q.get("difficulty")), 0),
+            str(q.get("topic") or ""),
+            str(q.get("id") or ""),
+        ),
+    )
 
 
 def next_level(level: str) -> str | None:
@@ -275,8 +308,7 @@ def pick_by_mix(
     while len(picked) < count and leftover:
         picked.append(leftover.pop(0))
 
-    roller.shuffle(picked)
-    return picked[:count]
+    return sort_questions_progressive(picked[:count])
 
 
 def infer_lesson_difficulty(lesson: dict, topic_diff: dict[str, str] | None = None) -> str:
@@ -338,8 +370,8 @@ def filter_lessons(
         if level == "beginner":
             filtered = [lesson for lesson, diff in ranked if diff in {"Easy", "Medium"}]
         if not filtered:
-            return list(lessons)
-    return filtered
+            return sort_lessons(list(lessons))
+    return sort_lessons(filtered)
 
 
 def session_params(level: str, mode: str) -> dict[str, Any]:

@@ -388,25 +388,15 @@ class OptionTile(tk.Frame):
 
 
 class Sidebar(tk.Frame):
-    """ניווט לבן מעוגל מימין, כמו במקאפ."""
+    """ניווט קצר: למידה יומית למעלה, מבחנים והגדרות מתחת."""
 
+    # פריטים ראשיים בלבד. מבחני מימ״ד/כללי נכנסים דרך «מבחנים».
     NAV_KEYS = (
         ("dashboard", "nav.home"),
-        ("meimad", "nav.meimad"),
-        ("general_exam", "nav.general"),
         ("mistakes", "nav.mistakes"),
+        ("exams", "nav.exams"),
         ("settings", "nav.settings"),
-        ("about", "nav.about"),
     )
-    NAV_MARKS = {
-        "dashboard": "⌂",
-        "subjects": "▣",
-        "meimad": "✎",
-        "general_exam": "◉",
-        "mistakes": "!",
-        "settings": "⚙",
-        "about": "i",
-    }
 
     def __init__(self, master, on_nav, **kwargs):
         page = COLORS["bg"]
@@ -416,13 +406,13 @@ class Sidebar(tk.Frame):
         self._bars: dict[str, tk.Frame] = {}
         self._rows: dict[str, tk.Frame] = {}
         self.pack_propagate(False)
-        card = RoundedCard(self, fill=_c("sidebar_bg", COLORS["card_bg"]), radius=26, padx=14, pady=18)
+        card = RoundedCard(self, fill=_c("sidebar_bg", COLORS["card_bg"]), radius=22, padx=14, pady=16)
         card.pack(fill="both", expand=True)
         ink = _c("sidebar_bg", COLORS["card_bg"])
         host = card.inner
 
         brand = tk.Frame(host, bg=ink)
-        brand.pack(fill="x", pady=(6, 8))
+        brand.pack(fill="x", pady=(4, 6))
         mark = tk.Label(brand, bg=ink, bd=0, highlightthickness=0)
         from core.display import dip
 
@@ -442,59 +432,71 @@ class Sidebar(tk.Frame):
             font=(ADHD_CONFIG["font_family"], font_size(12)),
             anchor="e",
         )
-        self.user_lbl.pack(pady=(2, 14), fill="x")
+        self.user_lbl.pack(pady=(0, 12), fill="x")
 
         from core.i18n import ui as i18n_ui
 
         for key, msg in self.NAV_KEYS:
-            row = tk.Frame(host, bg=ink)
-            row.pack(fill="x", pady=3)
-            bar = tk.Frame(row, width=4, bg=ink)
-            bar.pack(side="left", fill="y")
-            bar.pack_propagate(False)
-            mark_lbl = tk.Label(
-                row, text=self.NAV_MARKS.get(key, "•"), bg=ink,
-                fg=_c("sidebar_muted", COLORS["text_muted"]),
-                font=(ADHD_CONFIG["font_family"], font_size(12)),
-                width=2,
-            )
-            mark_lbl.pack(side="right", padx=(4, 2))
-            btn = TkButton(
-                row,
-                text=rtl(i18n_ui(msg)),
-                font=(ADHD_CONFIG["font_family"], font_size(14)),
-                height=48,
-                fg_color=ink,
-                hover_color=_c("sidebar_hover", COLORS["card_hover"]),
-                text_color=_c("sidebar_fg", COLORS["text_main"]),
-                anchor="e",
-                command=lambda k=key: self.on_nav(k),
-            )
-            btn.pack(side="right", fill="x", expand=True)
-            self.buttons[key] = btn
-            self._bars[key] = bar
-            self._rows[key] = row
+            self._add_nav_row(host, ink, key, i18n_ui(msg))
 
+        foot = tk.Frame(host, bg=ink)
+        foot.pack(side="bottom", fill="x", pady=(8, 2))
+        about = tk.Label(
+            foot, text=rtl(i18n_ui("nav.about")), bg=ink,
+            fg=_c("sidebar_muted", COLORS["text_muted"]),
+            font=(ADHD_CONFIG["font_family"], font_size(11)),
+            anchor="e", cursor="hand2",
+        )
+        about.pack(fill="x")
+        about.bind("<Button-1>", lambda _e: self.on_nav("about"))
         credit = tk.Label(
-            host, text=rtl(f"פיתוח: {DEVELOPER_NAME}"), bg=ink,
+            foot, text=rtl(f"פיתוח: {DEVELOPER_NAME}"), bg=ink,
             fg=_c("sidebar_muted", COLORS["text_muted"]),
             font=(ADHD_CONFIG["font_family"], font_size(10)),
             anchor="e",
         )
-        credit.pack(side="bottom", pady=(8, 4), fill="x")
+        credit.pack(fill="x", pady=(4, 0))
         self.stats_lbl = tk.Label(
-            host, text="", bg=ink, fg=_c("sidebar_muted", COLORS["text_muted"]),
+            foot, text="", bg=ink, fg=_c("sidebar_muted", COLORS["text_muted"]),
             font=(ADHD_CONFIG["font_family"], font_size(12)), justify="right", anchor="e",
         )
-        self.stats_lbl.pack(side="bottom", pady=(4, 0), fill="x")
+        self.stats_lbl.pack(fill="x", pady=(2, 0))
+
+    def _add_nav_row(self, host, ink: str, key: str, label: str) -> None:
+        row = tk.Frame(host, bg=ink)
+        row.pack(fill="x", pady=2)
+        bar = tk.Frame(row, width=4, bg=ink)
+        bar.pack(side="left", fill="y")
+        bar.pack_propagate(False)
+        btn = TkButton(
+            row,
+            text=rtl(label),
+            font=(ADHD_CONFIG["font_family"], font_size(14)),
+            height=44,
+            fg_color=ink,
+            hover_color=_c("sidebar_hover", COLORS["card_hover"]),
+            text_color=_c("sidebar_fg", COLORS["text_main"]),
+            anchor="e",
+            command=lambda k=key: self.on_nav(k),
+        )
+        btn.pack(side="right", fill="x", expand=True, padx=(0, 2))
+        self.buttons[key] = btn
+        self._bars[key] = bar
+        self._rows[key] = row
 
     def set_active(self, key: str) -> None:
+        # מימ״ד / כללי מדגישים את «מבחנים»; אודות בלי סימון.
+        active = key
+        if key in {"meimad", "general_exam", "exams"}:
+            active = "exams"
+        if key == "about":
+            active = ""
         idle = _c("sidebar_bg", COLORS["card_bg"])
         hover = _c("sidebar_hover", COLORS["card_hover"])
         fg = _c("sidebar_fg", COLORS["text_main"])
         gold = _c("sidebar_active", COLORS["primary"])
         for name, btn in self.buttons.items():
-            on = name == key
+            on = name == active
             bg = hover if on else idle
             try:
                 if btn.winfo_exists():
@@ -705,7 +707,7 @@ class StudioHero(RoundedCard):
                 padx=10, pady=4,
             ).pack(side="left", padx=(6, 0), anchor="n")
         tk.Label(
-            head, text=rtl(f"שלום, {who}! ברוך הבא חזרה"),
+            head, text=rtl(f"{greeting_he()}, {who}"),
             bg=bg, fg=COLORS["text_main"],
             font=(ADHD_CONFIG["font_family"], font_size(19), "bold"),
             anchor="e", justify="right",
@@ -725,7 +727,7 @@ class StudioHero(RoundedCard):
         if daily:
             pct = max(0, min(100, int(daily.get("completion", 0) or 0)))
         tk.Label(
-            inner, text=rtl(f"התקדמות כללית  {pct}%"), bg=bg, fg=muted,
+            inner, text=rtl(f"היום  {pct}%"), bg=bg, fg=muted,
             font=(ADHD_CONFIG["font_family"], font_size(11)),
             anchor="e", justify="right",
         ).pack(fill="x", pady=(10, 4))
@@ -733,7 +735,7 @@ class StudioHero(RoundedCard):
 
 
 class CompactSubjectTile(RoundedCard):
-    """כרטיס מקצוע נמוך: שם, סטטוס, וכניסה למקצוע."""
+    """כרטיס מקצוע נמוך: שם, סטטוס; לחיצה על האריח נכנסת למקצוע."""
 
     def __init__(self, master, subject_key: str, level_he: str, accuracy: float, total: int, on_open,
                  coming_soon: bool = False, **kwargs):
@@ -782,7 +784,8 @@ class CompactSubjectTile(RoundedCard):
         )
         meta.pack(fill="x")
 
-        RoundBar(inner, pct=pct / 100, color=accent_color, height=5).pack(fill="x", pady=(5, 4))
+        bar = RoundBar(inner, pct=pct / 100, color=accent_color, height=5)
+        bar.pack(fill="x", pady=(5, 4))
 
         if coming_soon:
             GhostButton(
@@ -791,14 +794,7 @@ class CompactSubjectTile(RoundedCard):
                 state="disabled",
             ).pack(fill="x")
         else:
-            ModernButton(
-                inner, text=rtl("הכנס למקצוע"), height=26,
-                font=(ADHD_CONFIG["font_family"], font_size(12), "bold"),
-                fg_color=accent_color, hover_color=accent_color,
-                text_color=COLORS["text_on_primary"],
-                command=self._click,
-            ).pack(fill="x")
-            for widget in (self, inner, top, col, title, meta, badge):
+            for widget in (self, inner, top, col, title, meta, badge, bar):
                 widget.bind("<Button-1>", self._click)
 
     def _click(self, _event=None):
