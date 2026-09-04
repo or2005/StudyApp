@@ -21,8 +21,12 @@ from core.config import (
 
 log = None
 
-USER_AGENT = f"StudyApp/{VERSION} (+https://github.com/or2005/StudyApp)"
+USER_AGENT = (
+    f"StudyApp/{VERSION} (+https://github.com/or2005/StudyApp) "
+    "Mozilla/5.0 (compatible; StudyApp-Updater)"
+)
 TIMEOUT = 18
+DOWNLOAD_TIMEOUT = 300
 MAX_DOWNLOAD = 450 * 1024 * 1024
 
 
@@ -178,7 +182,8 @@ def preferred_download(info: dict[str, Any]) -> str:
 
 def download_candidates(info: dict[str, Any]) -> list[str]:
     if os.name == "nt":
-        keys = ("download", "windows_setup", "windows_zip")
+        # Prefer zip when present: 5.0.0+ ships zip-only (no setup.exe yet).
+        keys = ("download", "windows_zip", "windows_setup")
     else:
         keys = ("download", "linux_portable")
     found: list[str] = []
@@ -190,8 +195,14 @@ def download_candidates(info: dict[str, Any]) -> list[str]:
 
 
 def download_file(url: str, dest: str, on_progress: Callable[[int, int], None] | None = None) -> str:
-    req = Request(url, headers={"User-Agent": USER_AGENT})
-    with urlopen(req, timeout=60) as resp:
+    req = Request(
+        url,
+        headers={
+            "User-Agent": USER_AGENT,
+            "Accept": "application/octet-stream,*/*",
+        },
+    )
+    with urlopen(req, timeout=DOWNLOAD_TIMEOUT) as resp:
         total = int(resp.headers.get("Content-Length") or 0)
         if total > MAX_DOWNLOAD:
             raise OSError("קובץ העדכון גדול מדי.")

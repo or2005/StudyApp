@@ -1,9 +1,9 @@
 {
-  "version": "4.9.0",
+  "version": "5.0.0",
   "released": "2026-09-04",
-  "notes": "הסברים אחרי תשובה שמלמדים איך לחשוב, שאלות ברורות יותר, אנליסט חזק יותר לנושאים חלשים, ואיורים גדולים יותר בהסבר. ההתקדמות בלימוד לא נמחקת.",
-  "windows_setup": "https://github.com/or2005/StudyApp/releases/download/v4.9.0/StudyApp-4.9.0-setup.exe",
-  "windows_zip": "https://github.com/or2005/StudyApp/releases/download/v4.9.0/StudyApp-4.9.0-windows.zip",
-  "linux_portable": "https://github.com/or2005/StudyApp/releases/download/v4.9.0/StudyApp-4.9.0-linux-portable.tar.gz",
-  "page": "https://github.com/or2005/StudyApp/releases/tag/v4.9.0"
+  "notes": "הרשמה ורמות לימוד, אבחון אופציונלי, עוזר AI מקומי (Ollama), והסברים ברורים יותר אחרי תשובה. ההתקדמות בלימוד לא נמחקת. ב־Windows הורידו את קובץ ה־ZIP (אין setup.exe בגרסה זו).",
+  "windows_setup": "",
+  "windows_zip": "https://github.com/or2005/StudyApp/releases/download/v5.0.0/StudyApp-5.0.0-windows.zip",
+  "linux_portable": "https://github.com/or2005/StudyApp/releases/download/v5.0.0/StudyApp-5.0.0-linux-portable.tar.gz",
+  "page": "https://github.com/or2005/StudyApp/releases/tag/v5.0.0"
 }

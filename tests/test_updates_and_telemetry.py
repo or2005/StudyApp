@@ -24,20 +24,27 @@ class VersionCompareTests(unittest.TestCase):
         self.assertFalse(updates.is_newer("4.2.9", "4.3.0"))
 
     def test_current_version_is_470(self):
-        self.assertEqual(VERSION, "4.9.0")
+        self.assertEqual(VERSION, "5.0.0")
         self.assertFalse(updates.is_newer(VERSION, VERSION))
 
-    def test_download_candidates_prefer_setup_then_zip(self):
+    def test_download_candidates_prefer_zip_then_setup(self):
         urls = updates.download_candidates({
-            "download": "https://example.com/StudyApp-4.5.3-setup.exe",
+            "download": "",
             "windows_setup": "https://example.com/StudyApp-4.5.3-setup.exe",
             "windows_zip": "https://example.com/StudyApp-4.5.3-windows.zip",
             "linux_portable": "https://example.com/linux.tar.gz",
         })
         self.assertTrue(urls)
         if os.name == "nt":
-            self.assertEqual(urls[0], "https://example.com/StudyApp-4.5.3-setup.exe")
-            self.assertIn("https://example.com/StudyApp-4.5.3-windows.zip", urls)
+            self.assertEqual(urls[0], "https://example.com/StudyApp-4.5.3-windows.zip")
+            self.assertIn("https://example.com/StudyApp-4.5.3-setup.exe", urls)
+        # Explicit download key still wins when set.
+        urls2 = updates.download_candidates({
+            "download": "https://example.com/StudyApp-4.5.3-setup.exe",
+            "windows_zip": "https://example.com/StudyApp-4.5.3-windows.zip",
+        })
+        if os.name == "nt":
+            self.assertEqual(urls2[0], "https://example.com/StudyApp-4.5.3-setup.exe")
 
 
 class LocalUpdateTests(unittest.TestCase):
