@@ -20,7 +20,7 @@ ICON_PATH: Final[str] = os.path.join(ASSETS_DIR, "icon.ico")
 ICON_PNG_PATH: Final[str] = os.path.join(ASSETS_DIR, "icon.png")
 APP_TITLE: Final[str] = "StudyApp"
 APP_NAME: Final[str] = "StudyApp"
-VERSION: Final[str] = "5.0.1"
+VERSION: Final[str] = "5.0.2"
 FONT_FAMILY: Final[str] = "Segoe UI"
 
 DEVELOPER_NAME: Final[str] = "אור דדשב"
@@ -33,8 +33,8 @@ GITHUB_REPO: Final[str] = "or2005/StudyApp"
 UPDATE_MANIFEST_URLS: Final[tuple[str, ...]] = (
     # jsDelivr for JSON (cache-friendly); raw with cache-buster as backup.
     "https://cdn.jsdelivr.net/gh/or2005/StudyApp@main/docs/latest.json",
-    "https://raw.githubusercontent.com/or2005/StudyApp/main/docs/latest.json?v=20260905b",
-    "https://raw.githubusercontent.com/or2005/StudyApp/master/docs/latest.json?v=20260905b",
+    "https://raw.githubusercontent.com/or2005/StudyApp/main/docs/latest.json?v=20260905c",
+    "https://raw.githubusercontent.com/or2005/StudyApp/master/docs/latest.json?v=20260905c",
 )
 # פינג אנונימי בהסכמה בלבד. אין שם / גיל / ת״ז.
 TELEMETRY_URL: Final[str] = "https://formsubmit.co/ajax/dadshaev@gmail.com"

@@ -1,5 +1,11 @@
 # Changelog
 
+## [5.0.2] - 2026-09-05
+
+### Fixed
+- Local AI tutor no longer hangs for minutes or crashes the UI when Ollama is slow/missing a model
+- Single in-flight AI request, ~40s timeouts, clearer fallbacks, safer step-by-step chat window
+
 ## [5.0.1] - 2026-09-05
 
 ### Fixed

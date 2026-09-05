@@ -36,6 +36,12 @@ DOWNLOAD_RETRIES = 2
 
 # מראות מובנות (גם אם latest.json במטמון ישן).
 _BUILTIN_MIRRORS = {
+    "5.0.2": (
+        "https://raw.githubusercontent.com/or2005/StudyApp/downloads/StudyApp-5.0.2-setup.exe",
+        "https://raw.githubusercontent.com/or2005/StudyApp/downloads/StudyApp-5.0.2-windows.zip",
+        "https://github.com/or2005/StudyApp/releases/download/v5.0.2/StudyApp-5.0.2-setup.exe",
+        "https://github.com/or2005/StudyApp/releases/download/v5.0.2/StudyApp-5.0.2-windows.zip",
+    ),
     "5.0.1": (
         "https://raw.githubusercontent.com/or2005/StudyApp/downloads/StudyApp-5.0.1-setup.exe",
         "https://raw.githubusercontent.com/or2005/StudyApp/downloads/StudyApp-5.0.1-windows.zip",

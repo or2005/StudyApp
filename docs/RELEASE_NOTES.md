@@ -1,15 +1,20 @@
-# StudyApp, Release Notes 5.0.0
+# StudyApp, Release Notes 5.0.2
 
 ## Downloads
 
-- Windows: `StudyApp-5.0.0-windows.zip` (unzip and run `StudyApp.exe`)
-- Linux: `StudyApp-5.0.0-linux-portable.tar.gz`
-- Direct Windows link: https://github.com/or2005/StudyApp/releases/download/v5.0.0/StudyApp-5.0.0-windows.zip
+### Windows (recommended installer)
+https://raw.githubusercontent.com/or2005/StudyApp/downloads/StudyApp-5.0.2-setup.exe
 
-Note: this release does not include `setup.exe`. Use the ZIP on Windows.
+GitHub backup:
+https://github.com/or2005/StudyApp/releases/download/v5.0.2/StudyApp-5.0.2-setup.exe
+
+### Windows ZIP
+https://raw.githubusercontent.com/or2005/StudyApp/downloads/StudyApp-5.0.2-windows.zip
+
+### Linux
+StudyApp-5.0.2-linux-portable.tar.gz
 
 ## Highlights
 
-- Onboarding with optional diagnostic, five study levels
-- Local AI tutor (Ollama)
-- Clearer post-answer teaching and practice AI actions
+- Stable local AI (Ollama): shorter timeouts, no hang when model missing, safer chat
+- Resilient update downloads with raw.githubusercontent mirrors
