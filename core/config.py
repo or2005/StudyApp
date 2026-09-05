@@ -31,8 +31,10 @@ COPYRIGHT_YEAR: Final[str] = "2026"
 # ערוץ עדכונים. כשמפרסמים ב-GitHub Releases, ממלאים את שם המאגר.
 GITHUB_REPO: Final[str] = "or2005/StudyApp"
 UPDATE_MANIFEST_URLS: Final[tuple[str, ...]] = (
-    "https://raw.githubusercontent.com/or2005/StudyApp/main/docs/latest.json",
-    "https://raw.githubusercontent.com/or2005/StudyApp/master/docs/latest.json",
+    # jsDelivr for JSON (cache-friendly); raw with cache-buster as backup.
+    "https://cdn.jsdelivr.net/gh/or2005/StudyApp@main/docs/latest.json",
+    "https://raw.githubusercontent.com/or2005/StudyApp/main/docs/latest.json?v=20260905b",
+    "https://raw.githubusercontent.com/or2005/StudyApp/master/docs/latest.json?v=20260905b",
 )
 # פינג אנונימי בהסכמה בלבד. אין שם / גיל / ת״ז.
 TELEMETRY_URL: Final[str] = "https://formsubmit.co/ajax/dadshaev@gmail.com"

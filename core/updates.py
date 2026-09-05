@@ -34,6 +34,16 @@ DOWNLOAD_TIMEOUT = 420
 MAX_DOWNLOAD = 450 * 1024 * 1024
 DOWNLOAD_RETRIES = 2
 
+# מראות מובנות ל־5.0.0 (גם אם latest.json במטמון ישן).
+_BUILTIN_MIRRORS = {
+    "5.0.0": (
+        "https://raw.githubusercontent.com/or2005/StudyApp/downloads/StudyApp-5.0.0-setup.exe",
+        "https://raw.githubusercontent.com/or2005/StudyApp/downloads/StudyApp-5.0.0-windows.zip",
+        "https://github.com/or2005/StudyApp/releases/download/v5.0.0/StudyApp-5.0.0-setup.exe",
+        "https://github.com/or2005/StudyApp/releases/download/v5.0.0/StudyApp-5.0.0-windows.zip",
+    ),
+}
+
 # מראות לקבצי Release כש־github.com / release-assets חסומים (בתי ספר, רשתות).
 # jsDelivr מחזיר 403 לקבצי exe/zip גדולים — raw.githubusercontent אמין יותר.
 _MIRROR_PREFIXES = (
@@ -186,37 +196,48 @@ def _merge_remote(github: dict | None, manifest: dict | None) -> dict[str, Any] 
     if not github and not manifest:
         return None
     if not github:
-        return dict(manifest or {})
-    out = dict(github)
-    if not manifest:
-        return out
-    for key in (
-        "windows_setup", "windows_zip", "linux_portable", "page", "notes",
-        "windows_setup_alt", "windows_zip_alt",
-    ):
-        if not str(out.get(key) or "").strip() and manifest.get(key):
-            out[key] = manifest[key]
-    # מראות מהמניפסט קודם (CDN), כדי לעקוף חסימות GitHub Releases.
+        out = dict(manifest or {})
+    else:
+        out = dict(github)
+        if manifest:
+            for key in (
+                "windows_setup", "windows_zip", "linux_portable", "page", "notes",
+                "windows_setup_alt", "windows_zip_alt",
+            ):
+                if not str(out.get(key) or "").strip() and manifest.get(key):
+                    out[key] = manifest[key]
+            if manifest.get("version") and not out.get("version"):
+                out["version"] = manifest["version"]
+            out["source"] = f"{out.get('source') or 'github'}+manifest"
+
+    # מראות מובנות + מניפסט קודם (CDN), כדי לעקוף חסימות GitHub Releases.
     mirrors: list[str] = []
-    for url in list(manifest.get("mirrors") or []) + _collect_urls(manifest):
+    version = str(out.get("version") or "").lstrip("vV")
+    for url in (
+        list(_BUILTIN_MIRRORS.get(version) or ())
+        + list((manifest or {}).get("mirrors") or [])
+        + _collect_urls(manifest)
+    ):
         url = str(url or "").strip()
         if url and url not in mirrors:
             mirrors.append(url)
     if mirrors:
         out["mirrors"] = mirrors
-        # אם ב־GitHub יש קבצים אבל הרשת חוסמת, עדיין נשמור אותם כ־alt.
         if out.get("windows_setup") and not out.get("windows_setup_alt"):
-            out["windows_setup_alt"] = out["windows_setup"]
+            if "raw.githubusercontent" not in str(out.get("windows_setup")):
+                out["windows_setup_alt"] = out["windows_setup"]
         if out.get("windows_zip") and not out.get("windows_zip_alt"):
-            out["windows_zip_alt"] = out["windows_zip"]
-        # העדפה לקישורי CDN מהמניפסט כשקיימים
-        for key in ("windows_setup", "windows_zip"):
-            man_url = str(manifest.get(key) or "").strip()
+            if "raw.githubusercontent" not in str(out.get("windows_zip")):
+                out["windows_zip_alt"] = out["windows_zip"]
+        for key, suffix in (("windows_setup", "-setup.exe"), ("windows_zip", "-windows.zip")):
+            man_url = str((manifest or {}).get(key) or "").strip()
             if man_url and ("raw.githubusercontent" in man_url or "jsdelivr" in man_url):
                 out[key] = man_url
-    if manifest.get("version") and not out.get("version"):
-        out["version"] = manifest["version"]
-    out["source"] = f"{out.get('source') or 'github'}+manifest"
+                continue
+            for url in mirrors:
+                if "raw.githubusercontent.com" in url and suffix in url:
+                    out[key] = url
+                    break
     return out
 
 
@@ -249,10 +270,11 @@ def check_latest(current: str = VERSION) -> dict[str, Any]:
         "latest": latest,
         "notes": notes,
         "download": download,
+        "version": latest,
         "windows_setup": remote.get("windows_setup") or "",
         "windows_zip": remote.get("windows_zip") or "",
         "linux_portable": remote.get("linux_portable") or "",
-        "mirrors": list(remote.get("mirrors") or []),
+        "mirrors": list(remote.get("mirrors") or []) + list(_BUILTIN_MIRRORS.get(latest) or ()),
         "page": remote.get("page") or "",
         "source": remote.get("source") or "",
         "message": message,
@@ -269,7 +291,7 @@ def _filename_of(url: str) -> str:
 
 
 def expand_mirrors(url: str) -> list[str]:
-    """מרחיב קישור GitHub למראות CDN / proxy."""
+    """מרחיב קישור GitHub למראות CDN / proxy (רק חבילות Windows שקיימות בענף downloads)."""
     url = str(url or "").strip()
     if not url:
         return []
@@ -277,12 +299,12 @@ def expand_mirrors(url: str) -> list[str]:
     name = _filename_of(url)
     lower = url.lower()
     if "github.com" in lower and "/releases/download/" in lower and name:
+        is_win_pkg = name.endswith((".exe", ".zip")) and "linux" not in name
         for prefix in _MIRROR_PREFIXES:
-            if prefix.endswith("/"):
-                if "jsdelivr" in prefix or "raw.githubusercontent" in prefix:
-                    alt = prefix + name
-                else:
-                    alt = prefix + url
+            if "raw.githubusercontent" in prefix:
+                if not is_win_pkg:
+                    continue
+                alt = prefix + name
             else:
                 alt = prefix + url
             if alt not in out:
@@ -297,9 +319,13 @@ def download_candidates(info: dict[str, Any]) -> list[str]:
     else:
         keys = ("download", "linux_portable")
     seed: list[str] = []
-    for url in info.get("mirrors") or []:
+    version = str(info.get("version") or info.get("latest") or "").lstrip("vV")
+    for url in list(info.get("mirrors") or []) + list(_BUILTIN_MIRRORS.get(version) or ()):
         url = str(url or "").strip()
         if url and url not in seed:
+            # ב־Windows לא לערבב לינוקס בראש הרשימה
+            if os.name == "nt" and "linux" in url.lower():
+                continue
             seed.append(url)
     for key in keys:
         url = str(info.get(key) or "").strip()
