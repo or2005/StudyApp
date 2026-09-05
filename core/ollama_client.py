@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import json
 import os
+import socket
 import threading
 import time
 import urllib.error
@@ -17,13 +18,19 @@ from core.config import (
 )
 
 _lock = threading.Lock()
+_chat_gate = threading.Lock()
 _cache: dict[str, Any] = {
     "ok": None,
     "checked_at": 0.0,
     "models": (),
     "error": "",
+    "has_model": None,
 }
-_HEALTH_TTL = 20.0
+_last_error = ""
+_HEALTH_TTL = 25.0
+# בקשות כבדות במקביל מפילות מחשבים חלשים וגורמות ל־Ollama להיתקע.
+_MAX_CHAT_SECONDS = 45.0
+_DEFAULT_PREDICT = 256
 
 
 def _base_url(override: str | None = None) -> str:
@@ -37,11 +44,12 @@ def _model_name(override: str | None = None) -> str:
 
 def _timeout(override: float | None = None) -> float:
     if override is not None:
-        return float(override)
+        return float(min(float(override), 90.0))
     try:
-        return float(os.environ.get("STUDYAPP_OLLAMA_TIMEOUT") or OLLAMA_TIMEOUT_SEC)
+        base = float(os.environ.get("STUDYAPP_OLLAMA_TIMEOUT") or OLLAMA_TIMEOUT_SEC)
     except (TypeError, ValueError):
-        return float(OLLAMA_TIMEOUT_SEC)
+        base = float(OLLAMA_TIMEOUT_SEC)
+    return float(min(max(8.0, base), _MAX_CHAT_SECONDS))
 
 
 def enabled(storage=None) -> bool:
@@ -72,6 +80,31 @@ def configured_url(storage=None) -> str:
     return _base_url()
 
 
+def last_error() -> str:
+    with _lock:
+        return str(_last_error or "")
+
+
+def _set_error(msg: str) -> None:
+    global _last_error
+    with _lock:
+        _last_error = str(msg or "").strip()
+
+
+def _model_present(names: tuple[str, ...] | list[str], model: str) -> bool:
+    model = (model or "").strip()
+    if not model or not names:
+        return False
+    base = model.split(":")[0]
+    for name in names:
+        name = str(name or "").strip()
+        if not name:
+            continue
+        if name == model or name.startswith(f"{model}:") or name.split(":")[0] == base:
+            return True
+    return False
+
+
 def _request(
     method: str,
     path: str,
@@ -87,7 +120,8 @@ def _request(
         data = json.dumps(payload, ensure_ascii=False).encode("utf-8")
         headers["Content-Type"] = "application/json"
     req = urllib.request.Request(url, data=data, headers=headers, method=method)
-    with urllib.request.urlopen(req, timeout=_timeout(timeout)) as resp:
+    wait = _timeout(timeout)
+    with urllib.request.urlopen(req, timeout=wait) as resp:
         raw = resp.read().decode("utf-8", errors="replace")
     if not raw.strip():
         return {}
@@ -98,26 +132,31 @@ def health(
     *,
     force: bool = False,
     storage=None,
-    timeout: float | None = 3.0,
+    timeout: float | None = 2.5,
 ) -> dict[str, Any]:
     """בדיקת חיבור קצרה עם מטמון."""
     now = time.time()
+    model = configured_model(storage)
+    url = configured_url(storage)
     with _lock:
         if (
             not force
             and _cache["ok"] is not None
             and (now - float(_cache["checked_at"] or 0)) < _HEALTH_TTL
         ):
+            names = list(_cache["models"] or ())
+            has = _cache.get("has_model")
+            if has is None:
+                has = _model_present(names, model)
             return {
                 "ok": bool(_cache["ok"]),
-                "models": list(_cache["models"] or ()),
+                "models": names,
                 "error": str(_cache["error"] or ""),
-                "url": configured_url(storage),
-                "model": configured_model(storage),
+                "url": url,
+                "model": model,
                 "cached": True,
+                "has_model": bool(has),
             }
-    url = configured_url(storage)
-    model = configured_model(storage)
     try:
         data = _request("GET", "/api/tags", timeout=timeout, base=url)
         names = tuple(
@@ -125,24 +164,26 @@ def health(
             for item in (data.get("models") or [])
             if isinstance(item, dict) and item.get("name")
         )
+        has = _model_present(names, model)
         with _lock:
-            _cache.update(ok=True, checked_at=now, models=names, error="")
+            _cache.update(
+                ok=True, checked_at=now, models=names, error="", has_model=has,
+            )
+        _set_error("" if has else f"המודל «{model}» חסר ב־Ollama")
         return {
             "ok": True,
             "models": list(names),
-            "error": "",
+            "error": "" if has else f"המודל «{model}» חסר",
             "url": url,
             "model": model,
             "cached": False,
-            "has_model": any(
-                name == model or name.startswith(f"{model}:") or model.startswith(name.split(":")[0])
-                for name in names
-            ),
+            "has_model": has,
         }
     except Exception as exc:
         msg = str(exc).strip() or type(exc).__name__
         with _lock:
-            _cache.update(ok=False, checked_at=now, models=(), error=msg)
+            _cache.update(ok=False, checked_at=now, models=(), error=msg, has_model=False)
+        _set_error(msg)
         return {
             "ok": False,
             "models": [],
@@ -158,6 +199,11 @@ def invalidate_health() -> None:
     with _lock:
         _cache["ok"] = None
         _cache["checked_at"] = 0.0
+        _cache["has_model"] = None
+
+
+def busy() -> bool:
+    return _chat_gate.locked()
 
 
 def chat(
@@ -169,50 +215,88 @@ def chat(
     temperature: float = 0.3,
     timeout: float | None = None,
     format_json: bool = False,
+    num_predict: int | None = None,
 ) -> str:
-    """שיחה עם המודל המקומי. מחזיר טקסט ריק אם נכשל."""
+    """שיחה עם המודל המקומי. מחזיר טקסט ריק אם נכשל / עסוק / אין מודל."""
     if not enabled(storage):
+        _set_error("העוזר המקומי כבוי")
         return ""
-    status = health(storage=storage)
-    if not status.get("ok"):
+    # בלי נעילה כפולה: בקשה שנייה נופלת מיד ל־fallback במקום לחכות דקות.
+    if not _chat_gate.acquire(blocking=False):
+        _set_error("העוזר עדיין עונה על בקשה קודמת. נסו שוב בעוד רגע.")
         return ""
-    chosen = (model or configured_model(storage)).strip()
-    payload_msgs: list[dict[str, str]] = []
-    if system.strip():
-        payload_msgs.append({"role": "system", "content": system.strip()})
-    for row in messages:
-        role = str(row.get("role") or "user").strip() or "user"
-        content = str(row.get("content") or "").strip()
-        if content:
-            payload_msgs.append({"role": role, "content": content})
-    if not payload_msgs:
-        return ""
-    body: dict[str, Any] = {
-        "model": chosen,
-        "messages": payload_msgs,
-        "stream": False,
-        "options": {
-            "temperature": float(temperature),
-            "num_predict": 512,
-        },
-    }
-    if format_json:
-        body["format"] = "json"
     try:
+        status = health(storage=storage, timeout=2.0)
+        if not status.get("ok"):
+            _set_error(status.get("error") or "אין חיבור ל־Ollama")
+            return ""
+        # חשוב: אם המודל חסר, Ollama עלול להתחיל הורדה ארוכה ולתקוע את הממשק.
+        if status.get("models") and not status.get("has_model"):
+            _set_error(
+                f"המודל «{status.get('model')}» לא מותקן. "
+                f"ב־Ollama הריצו: ollama pull {status.get('model')}"
+            )
+            return ""
+        chosen = (model or configured_model(storage)).strip()
+        payload_msgs: list[dict[str, str]] = []
+        if system.strip():
+            payload_msgs.append({"role": "system", "content": system.strip()})
+        for row in messages:
+            role = str(row.get("role") or "user").strip() or "user"
+            content = str(row.get("content") or "").strip()
+            if content:
+                payload_msgs.append({"role": role, "content": content})
+        if not payload_msgs:
+            return ""
+        predict = int(num_predict if num_predict is not None else _DEFAULT_PREDICT)
+        predict = max(64, min(400, predict))
+        body: dict[str, Any] = {
+            "model": chosen,
+            "messages": payload_msgs,
+            "stream": False,
+            "keep_alive": "2m",
+            "options": {
+                "temperature": float(temperature),
+                "num_predict": predict,
+            },
+        }
+        if format_json:
+            body["format"] = "json"
+        wait = _timeout(timeout if timeout is not None else _MAX_CHAT_SECONDS)
         data = _request(
             "POST",
             "/api/chat",
             payload=body,
-            timeout=timeout,
+            timeout=wait,
             base=configured_url(storage),
         )
-    except (urllib.error.URLError, urllib.error.HTTPError, TimeoutError, OSError, ValueError, json.JSONDecodeError):
+        msg = data.get("message") if isinstance(data, dict) else None
+        if isinstance(msg, dict):
+            text = str(msg.get("content") or "").strip()
+        else:
+            text = str((data or {}).get("response") or "").strip()
+        if not text:
+            _set_error("המודל החזיר תשובה ריקה")
+        else:
+            _set_error("")
+        return text
+    except (urllib.error.URLError, urllib.error.HTTPError, TimeoutError, socket.timeout, OSError, ValueError, json.JSONDecodeError) as exc:
         invalidate_health()
+        err = str(exc).strip() or type(exc).__name__
+        if "timed out" in err.lower() or isinstance(exc, (TimeoutError, socket.timeout)):
+            _set_error("התשובה לקחה יותר מדי זמן. נסו שוב, או כבו את העוזר בהגדרות.")
+        else:
+            _set_error(err)
         return ""
-    msg = data.get("message") if isinstance(data, dict) else None
-    if isinstance(msg, dict):
-        return str(msg.get("content") or "").strip()
-    return str(data.get("response") or "").strip()
+    except Exception as exc:
+        invalidate_health()
+        _set_error(str(exc).strip() or type(exc).__name__)
+        return ""
+    finally:
+        try:
+            _chat_gate.release()
+        except RuntimeError:
+            pass
 
 
 def generate(
@@ -223,38 +307,26 @@ def generate(
     storage=None,
     temperature: float = 0.3,
     timeout: float | None = None,
+    num_predict: int | None = None,
 ) -> str:
     """קריאה פשוטה ל-/api/generate."""
     if not enabled(storage):
         return ""
-    status = health(storage=storage)
-    if not status.get("ok"):
-        return ""
-    chosen = (model or configured_model(storage)).strip()
-    body: dict[str, Any] = {
-        "model": chosen,
-        "prompt": str(prompt or "").strip(),
-        "stream": False,
-        "options": {"temperature": float(temperature), "num_predict": 512},
-    }
-    if system.strip():
-        body["system"] = system.strip()
-    try:
-        data = _request(
-            "POST",
-            "/api/generate",
-            payload=body,
-            timeout=timeout,
-            base=configured_url(storage),
-        )
-    except (urllib.error.URLError, urllib.error.HTTPError, TimeoutError, OSError, ValueError, json.JSONDecodeError):
-        invalidate_health()
-        return ""
-    return str((data or {}).get("response") or "").strip()
+    # ממומש מעל chat כדי ליהנות מאותן הגנות (נעילה / מודל חסר / timeout).
+    messages = [{"role": "user", "content": str(prompt or "").strip()}]
+    return chat(
+        messages,
+        system=system,
+        model=model,
+        storage=storage,
+        temperature=temperature,
+        timeout=timeout,
+        num_predict=num_predict,
+    )
 
 
 def status_line(storage=None) -> str:
-    st = health(storage=storage, force=True)
+    st = health(storage=storage, force=True, timeout=2.5)
     if not enabled(storage):
         return "העוזר המקומי כבוי בהגדרות."
     if not st.get("ok"):
@@ -266,5 +338,11 @@ def status_line(storage=None) -> str:
     model = st.get("model") or configured_model(storage)
     if models and not st.get("has_model"):
         shown = " · ".join(models[:3])
-        return f"יש חיבור, אבל המודל «{model}» חסר. זמינים: {shown or 'אין'}."
+        return (
+            f"יש חיבור, אבל המודל «{model}» חסר. "
+            f"הריצו בטרמינל: ollama pull {model}. "
+            f"זמינים: {shown or 'אין'}."
+        )
+    if busy():
+        return f"מחובר · {model} · עסוק עכשיו"
     return f"מחובר · {model}"

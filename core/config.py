@@ -43,7 +43,7 @@ TELEMETRY_URL: Final[str] = "https://formsubmit.co/ajax/dadshaev@gmail.com"
 # STUDYAPP_OLLAMA_URL / STUDYAPP_OLLAMA_MODEL / STUDYAPP_OLLAMA_ENABLED / STUDYAPP_OLLAMA_TIMEOUT
 OLLAMA_BASE_URL: Final[str] = os.environ.get("STUDYAPP_OLLAMA_URL", "http://localhost:11434")
 OLLAMA_MODEL: Final[str] = os.environ.get("STUDYAPP_OLLAMA_MODEL", "qwen2.5:3b")
-OLLAMA_TIMEOUT_SEC: Final[float] = float(os.environ.get("STUDYAPP_OLLAMA_TIMEOUT", "120") or 120)
+OLLAMA_TIMEOUT_SEC: Final[float] = float(os.environ.get("STUDYAPP_OLLAMA_TIMEOUT", "40") or 40)
 OLLAMA_ENABLED_DEFAULT: Final[bool] = (
     str(os.environ.get("STUDYAPP_OLLAMA_ENABLED", "1")).strip().lower()
     not in {"0", "false", "off", "no"}

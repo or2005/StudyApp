@@ -6,6 +6,7 @@
 - Update downloads try raw.githubusercontent mirrors when GitHub Releases CDN is blocked
 - Added Windows setup.exe channel and in-app «הורדה בדפדפן» fallback
 - Stale latest.json cache no longer hides working mirror URLs
+- Local AI: shorter timeouts, no hang when model missing, single in-flight request, safer tutor chat window
 
 ## [5.0.0] - 2026-09-04
 

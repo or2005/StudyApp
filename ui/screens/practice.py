@@ -13,7 +13,7 @@ class PracticeScreen(Page):
     def __init__(self, master, session, on_back, on_finished, on_persist,
                  show_feedback=True, exam_mode=False, speaker=None, level_he=None,
                  on_report=None, subject_key=None, on_review_grade=None, storage=None,
-                 on_similar_topic=None, on_ask_ai=None, ai_engine=None):
+                 on_similar_topic=None, ai_engine=None, coach_tip: str = ""):
         super().__init__(master)
         self.session = session
         self.on_back = on_back
@@ -22,8 +22,8 @@ class PracticeScreen(Page):
         self.on_report = on_report
         self.on_review_grade = on_review_grade
         self.on_similar_topic = on_similar_topic
-        self.on_ask_ai = on_ask_ai
         self.ai_engine = ai_engine
+        self.coach_tip = str(coach_tip or "").strip()
         self.show_feedback = show_feedback
         self.exam_mode = exam_mode
         self.speaker = speaker
@@ -40,6 +40,7 @@ class PracticeScreen(Page):
         self._plain_box = None
         self._tutor_history = []
         self._hint_level = 0
+        self._coach_shown = False
         self._render()
 
     def destroy(self):
@@ -49,17 +50,15 @@ class PracticeScreen(Page):
 
 
     def _ai_status_line(self) -> str:
-        """שורה קצרה: כבוי / מחובר / מצב מקומי."""
+        """שורה קצרה בלי בדיקת רשת (לא חוסמת UI)."""
         if self.storage is None:
             return ""
         try:
-            from core import ai_tutor, ollama_client
+            from core import ollama_client
 
-            if not ollama_client.enabled(self.storage):
-                return "עוזר: כבוי"
-            if ai_tutor.available(self.storage):
-                return "עוזר: מחובר"
-            return "עוזר: מצב מקומי"
+            if ollama_client.enabled(self.storage):
+                return "עזרה מקומית זמינה"
+            return ""
         except Exception:
             return ""
 
@@ -135,7 +134,7 @@ class PracticeScreen(Page):
         self._locked = False
         self.start_time = time.time()
 
-        # סידור מלמעלה למטה — בלי רווח ריק שדוחף תשובות לקצה המסך
+        # סידור מלמעלה למטה - בלי רווח ריק שדוחף תשובות לקצה המסך
         self.pack_propagate(True)
 
         bar = tk.Frame(self, bg=COLORS["bg"])
@@ -187,6 +186,11 @@ class PracticeScreen(Page):
 
         self._progress = ProgressBar(self, pct=(current / total) if total else 0, height=5)
         self._progress.pack(fill="x", pady=(3, 3))
+
+        if (not self.exam_mode) and self.coach_tip and int(getattr(self.session, "current_index", 0) or 0) == 0:
+            fast_label(
+                self, self.coach_tip, size=12, muted=True, bg=COLORS["bg"], wrap=720,
+            ).pack(anchor="e", pady=(0, 4))
 
         if not self.exam_mode:
             diff = {"Easy": "קל", "Medium": "בינוני", "Hard": "קשה"}.get(
@@ -273,7 +277,7 @@ class PracticeScreen(Page):
         if self.speaker is not None and self.speaker.enabled:
             self.speaker.say(stem)
 
-        # תשובות ישר מתחת לשאלה — עמודה אחת כמו בבחינה, בלי רווח ריק באמצע
+        # תשובות ישר מתחת לשאלה - עמודה אחת כמו בבחינה, בלי רווח ריק באמצע
         self.opts = tk.Frame(self, bg=COLORS["bg"])
         self.opts.pack(fill="x", pady=(0, 2))
         latin = self.session.mode == "general" or bool(q.get("letter_options")) or (
@@ -354,7 +358,7 @@ class PracticeScreen(Page):
             pass
 
     def _pack_question_image(self, parent, url: str) -> None:
-        """מציג תמונת תמרור/שאלה מקישור רשמי — קומפקטי כדי לא לדחוף גלילה."""
+        """מציג תמונת תמרור/שאלה מקישור רשמי - קומפקטי כדי לא לדחוף גלילה."""
         try:
             import io
             import urllib.request
@@ -494,7 +498,7 @@ class PracticeScreen(Page):
         info(titles.get(self._hint_level, "רמז"), text)
 
     def _paraphrase_question(self, question):
-        """כפתור «תרגם לי את השאלה» — שפת יום־יום דרך Ollama."""
+        """כפתור «תרגם לי את השאלה» - שפת יום־יום דרך Ollama."""
         box = getattr(self, "_plain_box", None)
         if box is None:
             return
@@ -508,54 +512,49 @@ class PracticeScreen(Page):
         wait.pack(anchor="e")
 
         def done(result):
-            def paint():
-                if not box.winfo_exists():
-                    return
-                for child in box.winfo_children():
-                    child.destroy()
-                card2, inner2 = make_card(box, pady=10, padx=12, accent=COLORS["primary"])
-                card2.pack(fill="x")
-                fast_label(inner2, "בשפה פשוטה", size=12, muted=True, bg=COLORS["card_bg"]).pack(anchor="e")
-                body(inner2, result.get("plain") or "לא הצלחתי לנסח מחדש.", size=15).pack(anchor="e", pady=(2, 4))
-                if result.get("given"):
-                    fast_label(
-                        inner2, f"נתון: {result['given']}", size=13, bg=COLORS["card_bg"], wrap=720,
-                    ).pack(anchor="e", pady=(2, 0))
-                if result.get("find"):
-                    fast_label(
-                        inner2, f"צריך למצוא: {result['find']}", size=13, bg=COLORS["card_bg"], wrap=720,
-                    ).pack(anchor="e", pady=(2, 0))
-                if result.get("steps"):
-                    fast_label(
-                        inner2, f"שלבים: {result['steps']}", size=12, muted=True, bg=COLORS["card_bg"], wrap=720,
-                    ).pack(anchor="e", pady=(2, 0))
-                src = result.get("source") or ""
-                if src == "fallback":
-                    fast_label(
-                        inner2,
-                        "אין חיבור מקומי. מציגים ניסוח בסיסי. בדקו בהגדרות.",
-                        size=11, muted=True, bg=COLORS["card_bg"],
-                    ).pack(anchor="e", pady=(4, 0))
-                self.after(40, self._refit_scroll)
-
+            if not box.winfo_exists():
+                return
+            for child in box.winfo_children():
+                child.destroy()
+            card2, inner2 = make_card(box, pady=10, padx=12, accent=COLORS["primary"])
+            card2.pack(fill="x")
+            fast_label(inner2, "בשפה פשוטה", size=12, muted=True, bg=COLORS["card_bg"]).pack(anchor="e")
+            body(inner2, result.get("plain") or "לא הצלחתי לנסח מחדש.", size=15).pack(anchor="e", pady=(2, 4))
+            if result.get("given"):
+                fast_label(
+                    inner2, f"נתון: {result['given']}", size=13, bg=COLORS["card_bg"], wrap=720,
+                ).pack(anchor="e", pady=(2, 0))
+            if result.get("find"):
+                fast_label(
+                    inner2, f"צריך למצוא: {result['find']}", size=13, bg=COLORS["card_bg"], wrap=720,
+                ).pack(anchor="e", pady=(2, 0))
+            if result.get("steps"):
+                fast_label(
+                    inner2, f"שלבים: {result['steps']}", size=12, muted=True, bg=COLORS["card_bg"], wrap=720,
+                ).pack(anchor="e", pady=(2, 0))
+            src = result.get("source") or ""
+            if src == "fallback":
+                err = (result.get("error") or "").strip()
+                tip = "אין חיבור מקומי. מציגים ניסוח בסיסי. בדקו בהגדרות."
+                if err:
+                    tip = f"מצב מקומי: {err}"
+                fast_label(
+                    inner2,
+                    tip,
+                    size=11, muted=True, bg=COLORS["card_bg"], wrap=720,
+                ).pack(anchor="e", pady=(4, 0))
             try:
-                self.after(0, paint)
+                self.after(40, self._refit_scroll)
             except Exception:
                 pass
 
         def fail(msg):
-            def paint():
-                if not box.winfo_exists():
-                    return
-                for child in box.winfo_children():
-                    child.destroy()
-                from core.dialogs import info
-                info("תרגום שאלה", f"לא הצלחתי: {msg}")
-
-            try:
-                self.after(0, paint)
-            except Exception:
-                pass
+            if not box.winfo_exists():
+                return
+            for child in box.winfo_children():
+                child.destroy()
+            from core.dialogs import info
+            info("תרגום שאלה", f"לא הצלחתי: {msg}")
 
         from core import ai_tutor
 
@@ -564,14 +563,25 @@ class PracticeScreen(Page):
             lambda: ai_tutor.paraphrase_question(question, storage=storage),
             on_done=done,
             on_error=fail,
+            ui=self,
         )
 
     def _gentle_explain(self, question):
         from core import ai_tutor, dialogs
 
         def done(text):
+            if not self.winfo_exists():
+                return
             try:
-                self.after(0, lambda: dialogs.info("הסבר פשוט", text or "אין הסבר."))
+                dialogs.info("הסבר פשוט", text or "אין הסבר.")
+            except Exception:
+                pass
+
+        def fail(msg):
+            if not self.winfo_exists():
+                return
+            try:
+                dialogs.info("הסבר פשוט", str(msg))
             except Exception:
                 pass
 
@@ -579,14 +589,15 @@ class PracticeScreen(Page):
         ai_tutor.run_async(
             lambda: ai_tutor.gentle_explain(question, storage=storage),
             on_done=done,
-            on_error=lambda m: self.after(0, lambda: dialogs.info("הסבר פשוט", str(m))),
+            on_error=fail,
+            ui=self,
         )
 
     def _open_tutor(self, question, reveal=False):
         """חלון מורה פרטי סוקרטי."""
         import tkinter as tk
 
-        from core import ai_tutor
+        from core import ai_tutor, ollama_client
         from core.config import ADHD_CONFIG
         from ui.widgets import font_size
 
@@ -597,6 +608,7 @@ class PracticeScreen(Page):
         win.geometry("520x480")
         win.transient(root)
         history: list[dict[str, str]] = []
+        state = {"busy": False, "cancel": None, "started": 0.0}
 
         tk.Label(
             win, text=rtl("עזרה שלב־שלב"),
@@ -625,15 +637,49 @@ class PracticeScreen(Page):
         status = fast_label(win, "", size=11, muted=True, bg=COLORS["card_bg"])
         status.pack(anchor="e", padx=14, pady=(0, 8))
 
+        send_btn = ModernButton(row, text=rtl("שליחה"), width=100, height=36)
+        send_btn.pack(side="left", padx=(0, 6))
+        reveal_btn = GhostButton(row, text=rtl("גלה תשובה"), width=110, height=36)
+        reveal_btn.pack(side="left")
+
         def append(who: str, text: str):
-            chat.configure(state="normal")
-            chat.insert("end", rtl(f"{who}: {text}") + "\n\n", "rtl")
-            chat.see("end")
-            chat.configure(state="disabled")
+            try:
+                if not win.winfo_exists():
+                    return
+                chat.configure(state="normal")
+                chat.insert("end", rtl(f"{who}: {text}") + "\n\n", "rtl")
+                chat.see("end")
+                chat.configure(state="disabled")
+            except tk.TclError:
+                pass
+
+        def set_busy(flag: bool, note: str = ""):
+            state["busy"] = flag
+            try:
+                if not win.winfo_exists():
+                    return
+                send_btn.configure(state=("disabled" if flag else "normal"))
+                reveal_btn.configure(state=("disabled" if flag else "normal"))
+                status.configure(text=rtl(note))
+            except tk.TclError:
+                pass
 
         def ask(msg: str = "", do_reveal: bool = False):
-            status.configure(text=rtl("חושב…"))
+            if state["busy"]:
+                try:
+                    status.configure(text=rtl("עדיין חושב על ההודעה הקודמת…"))
+                except tk.TclError:
+                    pass
+                return
+            try:
+                if not win.winfo_exists():
+                    return
+            except tk.TclError:
+                return
+            set_busy(True, "חושב… (עד כ־40 שניות)")
             storage = self.storage
+            import time as _time
+            state["started"] = _time.time()
 
             def work():
                 return ai_tutor.socratic_turn(
@@ -645,8 +691,10 @@ class PracticeScreen(Page):
                 )
 
             def done(result):
-                def paint():
-                    status.configure(text="")
+                try:
+                    if not win.winfo_exists():
+                        return
+                    set_busy(False, "")
                     say = result.get("say") or ""
                     ask_q = result.get("ask") or ""
                     term = result.get("term") or ""
@@ -658,40 +706,73 @@ class PracticeScreen(Page):
                     append("מורה", blob)
                     history.append({"role": "assistant", "content": blob})
                     if result.get("source") == "fallback":
-                        status.configure(text=rtl("בלי חיבור: מצב מקומי."))
-
-                try:
-                    win.after(0, paint)
-                except Exception:
+                        err = result.get("error") or ollama_client.last_error()
+                        note = "בלי חיבור: מצב מקומי."
+                        if err:
+                            note = f"מצב מקומי · {err}"
+                        status.configure(text=rtl(note))
+                except tk.TclError:
                     pass
 
             def fail(err):
                 try:
-                    win.after(0, lambda: status.configure(text=rtl(str(err))))
-                except Exception:
+                    if win.winfo_exists():
+                        set_busy(False, str(err) or "שגיאה")
+                        append("מורה", "לא הצלחתי לענות עכשיו. נסו שוב בעוד רגע.")
+                except tk.TclError:
                     pass
 
-            ai_tutor.run_async(work, on_done=done, on_error=fail)
+            cancel = ai_tutor.run_async(work, on_done=done, on_error=fail, ui=win)
+            state["cancel"] = cancel
+
+            def tick_wait():
+                try:
+                    if not win.winfo_exists() or not state["busy"]:
+                        return
+                    elapsed = int(_time.time() - float(state["started"] or _time.time()))
+                    status.configure(text=rtl(f"חושב… {elapsed} שנ׳"))
+                    win.after(500, tick_wait)
+                except tk.TclError:
+                    pass
+
+            try:
+                win.after(500, tick_wait)
+            except tk.TclError:
+                pass
 
         def send(_event=None):
+            if state["busy"]:
+                return
             text = str(entry_var.get() or "").strip()
             if not text:
                 return
             entry_var.set("")
             append("אתם", text)
             history.append({"role": "user", "content": text})
-            low = text.lower()
             want_reveal = any(tok in text for tok in ("תן תשובה", "גלה", "תשובה מלאה"))
             ask(text, do_reveal=want_reveal)
 
-        ModernButton(row, text=rtl("שליחה"), width=100, height=36, command=send).pack(side="left", padx=(0, 6))
-        GhostButton(
-            row, text=rtl("גלה תשובה"), width=110, height=36,
-            command=lambda: ask("תן תשובה בבקשה", do_reveal=True),
-        ).pack(side="left")
+        def on_close():
+            cancel = state.get("cancel")
+            if cancel is not None:
+                try:
+                    cancel.set()
+                except Exception:
+                    pass
+            try:
+                win.destroy()
+            except tk.TclError:
+                pass
+
+        send_btn.configure(command=send)
+        reveal_btn.configure(command=lambda: ask("תן תשובה בבקשה", do_reveal=True))
         entry.bind("<Return>", send)
+        win.protocol("WM_DELETE_WINDOW", on_close)
         ask("", do_reveal=bool(reveal))
-        entry.focus_set()
+        try:
+            entry.focus_set()
+        except tk.TclError:
+            pass
 
     def _report(self, question):
         if self.on_report:
@@ -850,7 +931,7 @@ class PracticeScreen(Page):
             fast_label(
                 inner, f"שימו לב: {blocks['watch']}", size=13, muted=True, bg=COLORS["card_bg"], wrap=720,
             ).pack(anchor="e", pady=(0, 2))
-        # המחשה רק אחרי תשובה — לא תופסת מקום לפני הבחירה
+        # המחשה רק אחרי תשובה - לא תופסת מקום לפני הבחירה
         if not self.exam_mode:
             try:
                 from core.illustrations.schema import get_visual

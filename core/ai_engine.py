@@ -15,21 +15,8 @@ from core.config import ALL_SUBJECTS, HOME_SUBJECTS, subject_key, subject_label
 EXAM_MODES = frozenset({"mock", "final", "timed", "exam", "general", "meimad"})
 MEMORY_KEY = "ai_student_memory"
 MEMORY_MAX = 220
-CHAT_HISTORY_KEY = "ai_assistant_history"
-CHAT_HISTORY_MAX = 100
 NOTE_MAX_CHARS = 600
-CHAT_MSG_MAX = 1400
 
-_INTENT_PRACTICE = re.compile(
-    r"(התאם|תתאים|תרגול|תרגיל|תרגולים|חיזוק|לרמה|לפי הרמה|תן לי|בוא נתרגל|תתחיל תרגול)",
-    re.I,
-)
-_INTENT_WEAK = re.compile(
-    r"(חלש|פער|איפה אני|מה חסר|מה לשפר|נקודת תורפה|מה כדאי.{0,16}לחזק)",
-    re.I,
-)
-_INTENT_PACE = re.compile(r"(לאט|עייפ|הפסק|מיקוד|ADHD|ממהר|חיפזון|רגוע)", re.I)
-_INTENT_EXPLAIN = re.compile(r"(הסבר|לא מבין|לא מבינה|תפרק|שלב|עזור|תעזור)", re.I)
 _HEB = re.compile(r"[\u0590-\u05FF]")
 
 
@@ -67,12 +54,22 @@ class AIEngine:
     # ---------- סטטוס מערכת ----------
     def status(self) -> dict[str, Any]:
         health = ollama_client.health(storage=self.storage)
+        online = bool(health.get("ok"))
+        model = health.get("model") or ollama_client.configured_model(self.storage)
+        if not ollama_client.enabled(self.storage):
+            line = "העוזר המקומי כבוי בהגדרות."
+        elif not online:
+            line = f"אין חיבור לכתובת {health.get('url') or ollama_client.configured_url(self.storage)}."
+        elif health.get("models") and not health.get("has_model"):
+            line = f"מחובר, אבל המודל «{model}» חסר."
+        else:
+            line = f"מחובר · {model}"
         return {
             "enabled": ollama_client.enabled(self.storage),
-            "online": bool(health.get("ok")),
-            "model": health.get("model") or ollama_client.configured_model(self.storage),
+            "online": online,
+            "model": model,
             "url": health.get("url") or ollama_client.configured_url(self.storage),
-            "line": ollama_client.status_line(self.storage),
+            "line": line,
             "memory_items": len(self.memory_list()),
         }
 
@@ -337,166 +334,37 @@ class AIEngine:
             rem["focus_topics"] = best.get("weak") or []
         return rem
 
-    # ---------- צ'אט עוזר ----------
-    def chat_history(self) -> list[dict[str, str]]:
-        raw = self.storage.get_pref(CHAT_HISTORY_KEY, []) if self.storage else []
-        if not isinstance(raw, list):
-            return []
-        return [row for row in raw if isinstance(row, dict)][-CHAT_HISTORY_MAX:]
-
-    def save_chat_history(self, history: list[dict[str, str]]) -> None:
-        if not self.storage:
-            return
-        clean = []
-        for row in history[-CHAT_HISTORY_MAX:]:
-            if not isinstance(row, dict):
-                continue
-            role = str(row.get("role") or "user")
-            content = str(row.get("content") or "").strip()
-            if content:
-                clean.append({"role": role, "content": content[:CHAT_MSG_MAX]})
-        self.storage.set_pref(CHAT_HISTORY_KEY, clean)
-
-    def _local_intent_reply(self, message: str) -> dict[str, Any] | None:
-        text = str(message or "").strip()
-        if not text:
-            return {
-                "reply": "כתבו שאלה, או לחצו על «התאם תרגול לרמה שלי».",
-                "action": None,
-            }
-        if _INTENT_PRACTICE.search(text):
-            rem = self.pick_practice_target()
-            name = subject_label(rem["subject"])
-            topics = rem.get("focus_topics") or []
-            tip = rem.get("message") or rem.get("root_gap") or ""
-            reply = (
-                f"מתאים לכם תרגול ב{name}"
-                + (f" על {' · '.join(topics[:2])}" if topics else "")
-                + f" ({rem.get('drill_size', 6)} שאלות)."
-            )
-            if tip:
-                reply += f"\n{tip}"
-            if rem.get("memory"):
-                reply += f"\nנזכרים: {rem['memory']}"
-            return {
-                "reply": reply,
-                "action": "start_practice",
-                "subject": rem["subject"],
-                "topics": topics,
-                "count": rem.get("drill_size") or 6,
-                "title": rem.get("title") or "תרגול מותאם",
-            }
-        if _INTENT_WEAK.search(text):
-            rem = self.pick_practice_target()
-            name = subject_label(rem["subject"])
-            gap = rem.get("root_gap") or "עדיין אוספים נתונים"
-            prereq = rem.get("prerequisite") or ""
-            reply = f"לפי האנליסט, ב{name}: {gap}."
-            if prereq:
-                reply += f" כדאי לחזק קודם «{prereq}»."
-            steps = rem.get("steps") or []
-            if steps:
-                reply += "\n• " + "\n• ".join(steps[:3])
-            return {"reply": reply, "action": None, "remediation": rem}
-        if _INTENT_PACE.search(text):
-            # מוצאים מקצוע עם דפוס
-            subj = ""
-            if self.adaptive:
-                for key in ALL_SUBJECTS:
-                    p = self.pacing(key)
-                    if p.get("shorten"):
-                        subj = key
-                        break
-            p = self.pacing(subj or (HOME_SUBJECTS[0] if HOME_SUBJECTS else "math"))
-            reply = p.get("message") or "הקצב נראה בסדר. אפשר להמשיך סשן רגיל."
-            if p.get("count_cap"):
-                reply += f" ממליץ על עד {p['count_cap']} שאלות בסשן."
-            return {"reply": reply, "action": "enable_calm" if p.get("shorten") else None}
-        return None
-
-    def assistant_chat(
-        self,
-        message: str,
-        *,
-        history: list[dict[str, str]] | None = None,
-        question: dict | None = None,
-        subject: str = "",
-        use_llm: bool = True,
-    ) -> dict[str, Any]:
-        """עוזר כללי: שאלות, התאמת תרגול, עזרה על שאלה נוכחית."""
-        local = self._local_intent_reply(message)
-        # כוונת תרגול/פערים — תשובה מקומית מיידית (מחוברת לאנליסט)
-        if local and local.get("action") in {"start_practice", "enable_calm"}:
-            return local
-        if local and not use_llm:
-            return local
-
-        subj = subject_key(subject or (question or {}).get("subject") or "")
-        rem = self.remediation(subj) if subj else self.pick_practice_target()
-        mem = self.memory_context_line(subj, str((question or {}).get("topic") or ""))
-        analyst_bits = []
-        if rem.get("root_gap"):
-            analyst_bits.append(f"פער שקט: {rem['root_gap']}")
-        if rem.get("focus_topics"):
-            analyst_bits.append("נושאים לחיזוק: " + " · ".join(rem["focus_topics"][:3]))
-        if rem.get("pacing", {}).get("message"):
-            analyst_bits.append(rem["pacing"]["message"])
-        q_ctx = ""
-        if question:
-            from core.teach import clarify_stem
-
-            q_ctx = (
-                f"שאלה נוכחית: {clarify_stem(question)}\n"
-                f"נושא: {question.get('topic')}\n"
-                f"(אל תחשוף תשובה אלא אם מבקשים במפורש)\n"
-            )
-
-        if use_llm and self.available():
-            system = (
-                "אתה עוזר לימוד בתוכנת StudyApp לתלמידי תיכון בישראל. "
-                "עונים רק בעברית תקנית ופשוטה. "
-                "רק נושאי לימוד (מתמטיקה, לשון, אנגלית, היסטוריה וכדומה). "
-                "אם מבקשים תרגול: אמרו שתתאימו תרגול וציינו מקצוע ונושא. "
-                "במבחן אסור לעזור; כאן זה תרגול ושיחה. "
-                "קצר, בגובה העיניים, בלי אימוג'י ובלי מקפים ארוכים."
-            )
-            user = (
-                f"הקשר אנליסט:\n" + ("\n".join(analyst_bits) or "אין עדיין") + "\n"
-                f"זיכרון תלמיד: {mem or 'אין'}\n"
-                f"{q_ctx}"
-                f"הודעת תלמיד: {message}"
-            )
-            msgs = list(history or [])[-8:]
-            msgs = [{"role": r.get("role", "user"), "content": r.get("content", "")} for r in msgs]
-            msgs.append({"role": "user", "content": user})
-            raw = ollama_client.chat(msgs, system=system, storage=self.storage, temperature=0.2)
-            raw = _scrub_ai_dashes(raw)
-            if raw and _hebrew_ok(raw):
-                out: dict[str, Any] = {"reply": ai_tutor._clean(raw, 700), "action": None}
-                # אם גם יש כוונת תרגול: מצרפים פעולה
-                if local and local.get("action") == "start_practice":
-                    out.update({k: local[k] for k in ("action", "subject", "topics", "count", "title") if k in local})
-                elif _INTENT_PRACTICE.search(message or ""):
-                    out.update({
-                        "action": "start_practice",
-                        "subject": rem["subject"],
-                        "topics": rem.get("focus_topics") or [],
-                        "count": rem.get("drill_size") or 6,
-                    })
-                return out
-
-        if local:
-            return local
-        # נפילה
-        name = subject_label(rem.get("subject") or "math")
-        return {
-            "reply": (
-                f"אני כאן. לפי האנליסט כדאי להתמקד ב{name}"
-                + (f" ({' · '.join((rem.get('focus_topics') or [])[:2])})" if rem.get("focus_topics") else "")
-                + ". אפשר לבקש «התאם תרגול לרמה שלי»."
-            ),
-            "action": None,
-        }
+    # ---------- טיפים קצרים לאנליסט (בלי צ'אט) ----------
+    def coach_nudge(self, subject: str = "", topic: str = "") -> str:
+        """משפט קצר לתצוגה בשיעור/תרגול — מקומי ומהיר."""
+        subj = subject_key(subject or "")
+        if not subj:
+            try:
+                rem = self.pick_practice_target()
+            except Exception:
+                return ""
+            subj = subject_key(rem.get("subject") or "")
+            topic = topic or (rem.get("focus_topics") or [""])[0]
+        else:
+            rem = self.remediation(subj)
+        name = subject_label(subj)
+        focus = [str(t) for t in (rem.get("focus_topics") or []) if t]
+        if topic and topic not in focus:
+            focus = [topic] + focus
+        gap = str(rem.get("root_gap") or rem.get("message") or "").strip()
+        mem = self.memory_context_line(subj, topic or (focus[0] if focus else ""))
+        bits: list[str] = []
+        if focus:
+            bits.append("כדאי לחזק ב" + name + ": " + " · ".join(focus[:2]) + ".")
+        elif gap:
+            bits.append("ב" + name + ": " + gap)
+        if mem:
+            bits.append("נזכרים: " + mem)
+        pace = rem.get("pacing") or self.pacing(subj)
+        if isinstance(pace, dict) and pace.get("shorten") and pace.get("message"):
+            bits.append(str(pace["message"]))
+        out = " ".join(bits).strip()
+        return out[:220]
 
     # ---------- Hooks לאירועי מערכת ----------
     def on_answer(
@@ -580,12 +448,12 @@ class AIEngine:
             "features": self.features_for_mode(mode),
         }
 
-    def micro_lesson(self, subject: str, topic: str = "") -> str:
-        """מיקרו־שיעור קצר לפני חיזוק — עם זיכרון אם קיים."""
+    def micro_lesson(self, subject: str, topic: str = "", *, use_llm: bool = False) -> str:
+        """מיקרו־שיעור קצר. ברירת מחדל מקומית (בלי לחכות ל־Ollama)."""
         rem = self.remediation(subject)
         topic = topic or rem.get("prerequisite") or (rem.get("focus_topics") or [""])[0]
         mem = self.memory_context_line(subject, topic)
-        if self.available():
+        if use_llm and self.available():
             raw = ollama_client.chat(
                 [{
                     "role": "user",
@@ -598,12 +466,15 @@ class AIEngine:
                 system="מורה סבלני. עברית פשוטה.",
                 storage=self.storage,
                 temperature=0.3,
+                timeout=28.0,
+                num_predict=180,
             )
             if raw:
-                text = ai_tutor._clean(raw, 500)
-                self.remember_explanation(subject, topic, text[:200])
-                return text
+                text_out = ai_tutor._clean(raw, 500)
+                self.remember_explanation(subject, topic, text_out[:200])
+                return text_out
         base = rem.get("message") or f"נחזור ליסודות של «{topic or 'הנושא'}» לפני שממשיכים."
         if mem:
             base += f" כבר דיברנו על זה: {mem}"
         return base
+

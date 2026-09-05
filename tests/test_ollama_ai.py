@@ -1,6 +1,7 @@
 """בדיקות שכבת Ollama / מורה AI — בלי לדרוש שרת חי."""
 from __future__ import annotations
 
+import threading
 import unittest
 from unittest import mock
 
@@ -29,12 +30,54 @@ class OllamaClientTests(unittest.TestCase):
             "",
         )
 
+    def test_chat_skips_when_model_missing(self):
+        with mock.patch.object(
+            ollama_client,
+            "health",
+            return_value={
+                "ok": True,
+                "models": ["other:latest"],
+                "has_model": False,
+                "model": "qwen2.5:3b",
+                "error": "",
+            },
+        ):
+            with mock.patch.object(ollama_client, "enabled", return_value=True):
+                self.assertEqual(
+                    ollama_client.chat([{"role": "user", "content": "שלום"}]),
+                    "",
+                )
+        self.assertIn("מותקן", ollama_client.last_error())
+
+    def test_chat_busy_rejects_second_call(self):
+        entered = threading.Event()
+        release = threading.Event()
+
+        def slow_health(**kwargs):
+            entered.set()
+            release.wait(timeout=2)
+            return {"ok": False, "models": [], "has_model": False, "error": "x", "model": "m"}
+
+        with mock.patch.object(ollama_client, "enabled", return_value=True):
+            with mock.patch.object(ollama_client, "health", side_effect=slow_health):
+                def first():
+                    ollama_client.chat([{"role": "user", "content": "א"}])
+
+                t = threading.Thread(target=first, daemon=True)
+                t.start()
+                self.assertTrue(entered.wait(timeout=1))
+                second = ollama_client.chat([{"role": "user", "content": "ב"}])
+                err = ollama_client.last_error()
+                release.set()
+                t.join(timeout=2)
+        self.assertEqual(second, "")
+        self.assertTrue("עדיין" in err or "בקשה" in err)
+
 
 class AiTutorFallbackTests(unittest.TestCase):
     def test_paraphrase_fallback_without_ollama(self):
         with mock.patch.object(ai_tutor.ollama_client, "chat", return_value=""):
             with mock.patch.object(ai_tutor, "available", return_value=False):
-                # available is used by other paths; paraphrase always calls chat
                 got = ai_tutor.paraphrase_question(
                     {"id": "x", "question": "חשבו 2+2", "subject": "math"},
                     force=True,

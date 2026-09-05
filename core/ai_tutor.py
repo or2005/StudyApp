@@ -112,11 +112,14 @@ def paraphrase_question(
         storage=storage,
         temperature=0.2,
         format_json=True,
+        timeout=30.0,
+        num_predict=220,
     )
     data = _parse_json(raw)
     plain = _clean(str(data.get("plain") or raw or ""), 500)
     if not plain:
         # נפילה מקומית בלי AI
+        err = ollama_client.last_error()
         plain = f"במילים פשוטות: {stem}"
         result = {
             "plain": plain,
@@ -124,6 +127,7 @@ def paraphrase_question(
             "find": "מה בדיוק מבקשים למצוא או לבחור.",
             "steps": "1) סמנו נתון  2) סמנו מבוקש  3) בחרו",
             "source": "fallback",
+            "error": err,
         }
         return result
 
@@ -236,7 +240,8 @@ def analyze_silent_gaps(
         storage=storage,
         temperature=0.2,
         format_json=True,
-        timeout=55.0,
+        timeout=35.0,
+        num_predict=240,
     )
     data = _parse_json(raw)
     if not data:
@@ -374,6 +379,13 @@ def socratic_turn(
         "source": "fallback",
     }
     if not available(storage):
+        err = ollama_client.last_error()
+        if err:
+            fallback["say"] = (
+                "כרגע אין עוזר מקומי זמין. אפשר להמשיך לבד עם רמז מהשאלה, "
+                "או לבדוק בהגדרות ש־Ollama רץ."
+            )
+            fallback["error"] = err
         return fallback
 
     ctx = (
@@ -386,13 +398,13 @@ def socratic_turn(
         ctx += "התלמיד ביקש לגלות את התשובה. אפשר לגלות בעדינות עם הסבר קצר.\n"
 
     messages: list[dict[str, str]] = [{"role": "user", "content": ctx + "התחל הכוונה קצרה."}]
-    for row in (history or [])[-8:]:
+    for row in (history or [])[-6:]:
         role = "assistant" if row.get("role") == "assistant" else "user"
         content = str(row.get("content") or "").strip()
         if content:
-            messages.append({"role": role, "content": content})
+            messages.append({"role": role, "content": content[:500]})
     if student_message.strip():
-        messages.append({"role": "user", "content": student_message.strip()})
+        messages.append({"role": "user", "content": student_message.strip()[:400]})
 
     raw = ollama_client.chat(
         messages,
@@ -400,12 +412,17 @@ def socratic_turn(
         storage=storage,
         temperature=0.35,
         format_json=True,
-        timeout=60.0,
+        timeout=35.0,
+        num_predict=200,
     )
     data = _parse_json(raw)
     if not data:
         if raw:
             return {"say": _clean(raw, 400), "ask": "", "term": "", "done": "false", "source": "ollama"}
+        err = ollama_client.last_error()
+        if err:
+            fallback["say"] = "לא קיבלתי תשובה בזמן. נסו שוב, או כבו את העוזר בהגדרות אם זה חוזר."
+            fallback["error"] = err
         return fallback
     return {
         "say": _clean(str(data.get("say") or fallback["say"]), 400),
@@ -439,6 +456,8 @@ def gentle_explain(
         system="אתה מורה סבלני. עברית פשוטה. בלי אימוג'י.",
         storage=storage,
         temperature=0.25,
+        timeout=28.0,
+        num_predict=180,
     )
     return _clean(raw or body, 500)
 
@@ -478,24 +497,81 @@ def supervisor_report(
         system=_SUPER_SYSTEM,
         storage=storage,
         temperature=0.25,
-        timeout=70.0,
+        timeout=40.0,
+        num_predict=320,
     )
     return _clean(raw, 2000) or ("דוח מקומי:\n" + blob)
 
 
-def run_async(fn: Callable, on_done: Callable[[Any], None], on_error: Callable[[str], None] | None = None) -> None:
-    """מריץ קריאת AI ברקע כדי לא לחסום את ה־UI."""
+def run_async(
+    fn: Callable,
+    on_done: Callable[[Any], None],
+    on_error: Callable[[str], None] | None = None,
+    *,
+    ui=None,
+) -> threading.Event:
+    """מריץ קריאת AI ברקע כדי לא לחסום את ה־UI.
+
+    מחזיר Event לביטול: set() אומר להתעלם מהתוצאה (חלון נסגר).
+    אם מועבר ui (ווידג'ט Tk), התוצאה חוזרת דרך after() ורק אם הווידג'ט עדיין חי.
+    """
+    cancel = threading.Event()
+
+    def _alive(widget) -> bool:
+        if cancel.is_set():
+            return False
+        if widget is None:
+            return True
+        try:
+            return bool(widget.winfo_exists())
+        except Exception:
+            return False
 
     def worker():
         try:
             result = fn()
         except Exception as exc:
-            if on_error:
-                on_error(str(exc))
+            err = str(exc)
+
+            def fail():
+                if not _alive(ui):
+                    return
+                if on_error:
+                    try:
+                        on_error(err)
+                    except Exception:
+                        pass
+
+            if ui is not None:
+                try:
+                    ui.after(0, fail)
+                except Exception:
+                    pass
+            elif on_error and not cancel.is_set():
+                try:
+                    on_error(err)
+                except Exception:
+                    pass
             return
-        try:
-            on_done(result)
-        except Exception:
-            pass
+
+        def succeed():
+            if not _alive(ui):
+                return
+            try:
+                on_done(result)
+            except Exception:
+                pass
+
+        if ui is not None:
+            try:
+                ui.after(0, succeed)
+            except Exception:
+                pass
+        elif not cancel.is_set():
+            try:
+                on_done(result)
+            except Exception:
+                pass
 
     threading.Thread(target=worker, daemon=True).start()
+    return cancel

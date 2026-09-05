@@ -69,7 +69,6 @@ from core import nativeos, profiles, telemetry, updates
 from ui.toast import ToastHost
 from ui.fast import FastRow, FastScroll, fast_label
 from ui.screens.about import AboutScreen
-from ui.screens.ai_assistant import AIAssistantScreen
 from ui.screens.general_report import GeneralExamReportScreen
 from core.ai_engine import AIEngine
 from ui.screens.lesson import LessonScreen
@@ -408,8 +407,6 @@ class StudyApp(ctk.CTk):
                 self._show_general_exam_hub()
             elif key == "mistakes":
                 self._show_mistakes()
-            elif key == "ai_assistant":
-                self._show_ai_assistant()
             elif key == "settings":
                 self._show_settings()
             elif key == "about":
@@ -636,7 +633,7 @@ class StudyApp(ctk.CTk):
             self.rail = ContextRail(self, on_weak=self._open_weak_from_rail)
             self._chrome_state = None
             self._apply_chrome(refresh=True)
-            self._nav(tab if tab in {"dashboard", "subjects", "exams", "meimad", "general_exam", "mistakes", "ai_assistant", "settings", "about", "studio"} else "dashboard")
+            self._nav(tab if tab in {"dashboard", "subjects", "exams", "meimad", "general_exam", "mistakes", "settings", "about", "studio"} else "dashboard")
         finally:
             self._rebuilding = False
 
@@ -1033,7 +1030,10 @@ class StudyApp(ctk.CTk):
         elif kind == "weak":
             key = nxt.get("subject")
             if key:
-                self._start_mode(key, "practice")
+                rem = self.ai_engine.remediation(key)
+                self._ai_start_adapted_practice(
+                    key, rem.get("focus_topics") or [], int(rem.get("drill_size") or 6),
+                )
             else:
                 self._start_smart_practice()
         elif kind == "unpracticed":
@@ -1087,51 +1087,21 @@ class StudyApp(ctk.CTk):
         self.storage.forget_mistakes()
         self._show_mistakes()
 
-    def _show_ai_assistant(self, question=None, subject: str = ""):
-        self.active_tab = "ai_assistant"
-        self._show_chrome()
-        self._clear()
-        self._set_window_title("עוזר בינה מלאכותית")
-        # אם נפתח מתרגול - שומרים הקשר שאלה
-        q = question
-        subj = subject or self.current_subject or ""
-        from_practice = False
-        if q is None and self.current_session and self.current_mode not in {
-            "mock", "final", "timed", "general", "meimad",
-        }:
-            try:
-                q = self.current_session.get_current_question()
-                subj = subj or self.current_subject or ""
-                from_practice = True
-            except Exception:
-                q = None
-        elif question is not None and self.current_session:
-            from_practice = True
-
-        def _back():
-            if from_practice and self.current_session:
-                self._render_practice()
-            else:
-                self._show_dashboard()
-
-        AIAssistantScreen(
-            self.content,
-            ai_engine=self.ai_engine,
-            on_start_practice=self._ai_start_adapted_practice,
-            on_back=_back,
-            initial_question=q,
-            subject=subj or "",
-        ).pack(fill="both", expand=True)
-
     def _ai_start_adapted_practice(self, subject: str, topics: list | None, count: int = 6):
-        """מתחיל תרגול מותאם שהעוזר בחר - דרך האנליסט."""
+        """תרגול ממוקד לפי האנליסט (+ טיפ קצר מהמנוע)."""
         subj = subject_key(subject or "") or (HOME_SUBJECTS[0] if HOME_SUBJECTS else "math")
         topics = [str(t) for t in (topics or []) if t]
-        # מיקרו־שיעור קצר לפני החיזוק
+        if not topics:
+            try:
+                rem = self.ai_engine.remediation(subj)
+                topics = [str(t) for t in (rem.get("focus_topics") or []) if t][:3]
+                count = int(rem.get("drill_size") or count or 6)
+            except Exception:
+                pass
         try:
-            lesson = self.ai_engine.micro_lesson(subj, topics[0] if topics else "")
-            if lesson:
-                dialogs.info("לפני התרגול", lesson)
+            nudge = self.ai_engine.coach_nudge(subj, topics[0] if topics else "")
+            if nudge:
+                self.toasts.show(nudge, kind="ok")
         except Exception:
             pass
         pace = self.ai_engine.pacing(subj)
@@ -1151,6 +1121,11 @@ class StudyApp(ctk.CTk):
             pool, subj, count=want, mode="practice", srs=self.srs,
             prefer_topics=topics or None, topic_only=bool(topics),
         )
+        if not questions:
+            # בלי נושא מדויק — עדיין תרגול רגיל לפי האנליסט
+            questions, params = self.adaptive_engine.select_questions(
+                pool, subj, count=want, mode="practice", srs=self.srs,
+            )
         if not questions:
             dialogs.info("מידע", "לא נמצאו שאלות לחיזוק.")
             return
@@ -1256,11 +1231,36 @@ class StudyApp(ctk.CTk):
     def _check_ollama(self):
         from core import dialogs, ollama_client
 
-        ollama_client.invalidate_health()
-        line = ollama_client.status_line(self.storage)
-        self.storage.set_pref("ollama_status", line)
-        dialogs.info("Ollama", line)
-        self._show_settings()
+        self.storage.set_pref("ollama_status", "בודק חיבור…")
+        if self.active_tab == "settings":
+            self._show_settings()
+
+        def work():
+            ollama_client.invalidate_health()
+            return ollama_client.status_line(self.storage)
+
+        def done(line: str):
+            self.storage.set_pref("ollama_status", line)
+            try:
+                dialogs.info("Ollama", line)
+            except Exception:
+                pass
+            if self.active_tab == "settings":
+                self._show_settings()
+
+        def fail(err: str):
+            msg = f"בדיקת החיבור נכשלה: {err}"
+            self.storage.set_pref("ollama_status", msg)
+            try:
+                dialogs.info("Ollama", msg)
+            except Exception:
+                pass
+            if self.active_tab == "settings":
+                self._show_settings()
+
+        from core import ai_tutor
+
+        ai_tutor.run_async(work, on_done=done, on_error=fail, ui=self)
 
     def _set_hebrew_fix(self, mode: str):
         from core import rtltext
@@ -1372,6 +1372,7 @@ class StudyApp(ctk.CTk):
                 "analyst": self._studio_analyst_report,
                 "exam_ready": self._studio_exam_ready,
                 "ollama": self._studio_ollama_status,
+                "quality": self._studio_quality_report,
                 "reset_levels": self._studio_reset_levels,
                 "health": self._studio_health,
                 "pytest": self._studio_pytest,
@@ -1507,11 +1508,17 @@ class StudyApp(ctk.CTk):
             + f"מודל מוגדר: {st.get('model')}\n"
             + f"מודלים מותקנים: {models}\n"
             + f"זיכרון תלמיד: {eng_status.get('memory_items', 0)} רשומות\n"
-            + "תפריט: עוזר בינה מלאכותית (מעל הגדרות).\n"
-            + "כפתורים בתרגול: «תרגם לי» · «מורה AI» · «שאל עוזר» · סולם רמזים.\n"
+            + "בתרגול: «בשפה פשוטה» · «מורה שלב־שלב» · סולם רמזים.\n"
+            + "תרגול ממוקד לפי האנליסט ממסך המקצוע / «מה עכשיו».\n"
             + "שומר בחינה: במבחן נעולים כלי AI עד הדוח.\n"
             + "דוח אנליסט עמוק מפעיל גם משגיח AI מקביל."
         )
+
+    def _studio_quality_report(self):
+        from core import content_quality
+
+        content_quality.invalidate_cache()
+        return content_quality.report_text(force=True)
 
     def _studio_reset_levels(self):
         if not dialogs.confirm("איפוס רמות", "לאפס את רמות האנליסט בפרופיל הנוכחי?"):
@@ -2319,20 +2326,38 @@ class StudyApp(ctk.CTk):
 
         topics = subject_topic_catalog(data, compose_pool(subject_key_value, []))
         coach = self.adaptive_engine.evaluate(subject_key_value)
+        try:
+            rem = self.ai_engine.remediation(subject_key_value)
+            if rem.get("root_gap") or rem.get("message"):
+                coach = dict(coach or {})
+                if not coach.get("message"):
+                    coach["tone"] = "weak_topic"
+                    coach["title"] = rem.get("title") or "לפי האנליסט"
+                    coach["message"] = rem.get("message") or rem.get("root_gap") or ""
+                coach["focus_topics"] = rem.get("focus_topics") or []
+        except Exception:
+            pass
         SubjectHubScreen(
             self.content, subject_key_value,
             on_mode_select=self._start_mode, on_back=self._show_dashboard, stats=stats,
             storage=self.storage, level_info=snap, specs=specs, topics=topics,
             coach=coach,
+            on_adapted=lambda: self._ai_start_adapted_practice(subject_key_value, None),
         ).pack(fill="both", expand=True)
 
     def _clean_pool(self, pool):
-        """מסנן שאלות הטעיה, וגם שאלות שהתלמיד דיווח עליהן כשגויות."""
+        """מסנן הטעיות, דיווחים, ושאלות בהסגר איכות קריטי."""
         reported = self.storage.reported_ids()
         clean = [
             q for q in pool
             if q.get("kind") != "trick" and str(q.get("id") or "") not in reported
         ]
+        try:
+            from core.content_quality import filter_student_pool
+
+            clean = filter_student_pool(clean)
+        except Exception:
+            pass
         return clean or [q for q in pool if q.get("kind") != "trick"] or list(pool)
 
     def _report_question(self, question):
@@ -2402,6 +2427,17 @@ class StudyApp(ctk.CTk):
         wanted = [str(item) for item in (topics or []) if item]
         if topic and str(topic) not in wanted:
             wanted.insert(0, str(topic))
+        # תרגול חופשי בלי נושא: האנליסט מציע נושאים חלשים
+        if mode in {"practice", "smart_practice"} and not wanted and not topic_only:
+            try:
+                rem = self.ai_engine.remediation(subject)
+                for t in rem.get("focus_topics") or []:
+                    if t and str(t) not in wanted:
+                        wanted.append(str(t))
+                    if len(wanted) >= 3:
+                        break
+            except Exception:
+                pass
         if topic_only and wanted:
             scoped = [q for q in pool if q.get("topic") in set(wanted)]
             if not scoped:
@@ -2451,36 +2487,12 @@ class StudyApp(ctk.CTk):
         return [key for _, __, key in ranked]
 
     def _start_smart_practice(self):
-        weak = [key for key in self._live_weak_subjects() if key in SUBJECTS]
-        if not weak:
-            diagnostic = self.storage.get_diagnostic() or {}
-            weak = [subject_key(item) for item in (diagnostic.get("weak_topics") or [])]
-            weak = [item for item in weak if item in SUBJECTS]
-        if not weak:
-            weak = [
-                subject_key(item)
-                for item in (self.storage.get_learning_snapshot().get("weak_subjects") or [])
-            ]
-            weak = [item for item in weak if item in SUBJECTS]
-        if not weak:
-            weak = list(HOME_SUBJECTS[:2])
-        pool = []
-        for key in weak:
-            data = load_subject(key) or {}
-            pool.extend(self._clean_pool(data.get("questions") or []))
-        if not pool:
-            dialogs.info("מידע", "לא נמצאו שאלות לנושאים לחיזוק.")
-            return
-        questions, _params = self.adaptive_engine.select_questions(
-            pool, weak[0], count=min(8, len(pool)), mode="practice", srs=self.srs,
+        rem = self.ai_engine.pick_practice_target()
+        self._ai_start_adapted_practice(
+            rem.get("subject") or "",
+            rem.get("focus_topics") or [],
+            int(rem.get("drill_size") or 6),
         )
-        if not questions:
-            questions = random.sample(pool, min(8, len(pool)))
-        self.current_subject = weak[0]
-        self.current_mode = "smart_practice"
-        self.current_session = ExamSession(questions, mode="practice", subject_key=weak[0])
-        self.session_store.save(self.current_session.to_state(self.current_subject))
-        self._render_practice()
 
     def _start_mistake_drill(self, subject=None):
         saved = self.storage.get_mistakes(subject)
@@ -2609,6 +2621,9 @@ class StudyApp(ctk.CTk):
                 subject, "guided", topic=lesson.get("topic"), topic_only=True,
             ),
             speaker=self.speaker,
+            coach_tip=self.ai_engine.coach_nudge(
+                subject, str(lesson.get("topic") or lesson.get("title") or ""),
+            ),
         ).pack(fill="both", expand=True)
 
     # ---------- תרגול ----------
@@ -2679,9 +2694,12 @@ class StudyApp(ctk.CTk):
             subject_key=self.current_subject,
             storage=self.storage,
             on_similar_topic=self._similar_topic_drill,
-            on_ask_ai=None if self.current_mode in {"mock", "final", "timed", "general", "meimad"}
-            else (lambda q: self._show_ai_assistant(question=q, subject=self.current_subject or "")),
             ai_engine=getattr(self, "ai_engine", None),
+            coach_tip=(
+                ""
+                if self.current_mode in {"mock", "final", "timed", "general", "meimad"}
+                else self.ai_engine.coach_nudge(self.current_subject or "")
+            ),
         ).pack(fill="both", expand=True)
 
     def _persist_answer(self, question, is_correct, elapsed, selected_index=-1):
