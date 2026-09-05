@@ -180,7 +180,7 @@ class StudyApp(ctk.CTk):
             self.after(
                 900,
                 lambda: self.toasts.show(
-                    "תוקנה תצוגת עברית למחשב לועזי/רוסי — בלי היפוך משפטים.",
+                    "תוקנה תצוגת עברית למחשב לועזי/רוסי - בלי היפוך משפטים.",
                     kind="ok",
                 ),
             )
@@ -743,7 +743,8 @@ class StudyApp(ctk.CTk):
                 key: result[key]
                 for key in (
                     "newer", "latest", "current", "notes", "download",
-                    "windows_setup", "windows_zip", "linux_portable", "page", "source", "message",
+                    "windows_setup", "windows_zip", "linux_portable", "mirrors",
+                    "page", "source", "message",
                 )
                 if key in result
             }
@@ -813,6 +814,18 @@ class StudyApp(ctk.CTk):
             dialogs.error("עדכון", message)
         if self.active_tab == "settings":
             self._show_settings()
+
+    def _open_update_in_browser(self):
+        pending = self.storage.get_pref("pending_update") or {}
+        if not isinstance(pending, dict):
+            pending = {}
+        url = updates.open_in_browser(pending)
+        dialogs.info(
+            "הורדה בדפדפן",
+            "נפתח קישור הורדה בדפדפן.\n"
+            "שמרו את הקובץ, ואז בהגדרות לחצו «התקנה מקובץ».\n\n"
+            f"{url}",
+        )
 
     def _pick_update_file(self):
         from tkinter import filedialog
@@ -968,7 +981,7 @@ class StudyApp(ctk.CTk):
             heading(self.content, "מקצועות בחירה", 15).pack(anchor="e", pady=(14, 4))
             body(
                 self.content,
-                "חשמל ואלקטרוניקה — לימוד, שיעורים ותרגול. לא נכנסים למבחן הכללי ולמימ״ד.",
+                "חשמל ואלקטרוניקה - לימוד, שיעורים ותרגול. לא נכנסים למבחן הכללי ולמימ״ד.",
                 muted=True,
             ).pack(anchor="e", pady=(0, 4))
             self._pack_subject_grid(mastery, elective_keys)
@@ -1079,7 +1092,7 @@ class StudyApp(ctk.CTk):
         self._show_chrome()
         self._clear()
         self._set_window_title("עוזר בינה מלאכותית")
-        # אם נפתח מתרגול — שומרים הקשר שאלה
+        # אם נפתח מתרגול - שומרים הקשר שאלה
         q = question
         subj = subject or self.current_subject or ""
         from_practice = False
@@ -1111,7 +1124,7 @@ class StudyApp(ctk.CTk):
         ).pack(fill="both", expand=True)
 
     def _ai_start_adapted_practice(self, subject: str, topics: list | None, count: int = 6):
-        """מתחיל תרגול מותאם שהעוזר בחר — דרך האנליסט."""
+        """מתחיל תרגול מותאם שהעוזר בחר - דרך האנליסט."""
         subj = subject_key(subject or "") or (HOME_SUBJECTS[0] if HOME_SUBJECTS else "math")
         topics = [str(t) for t in (topics or []) if t]
         # מיקרו־שיעור קצר לפני החיזוק
@@ -1177,6 +1190,7 @@ class StudyApp(ctk.CTk):
             on_check_update=lambda: self._run_update_check(manual=True),
             on_install_update=self._install_pending_update,
             on_pick_update=self._pick_update_file,
+            on_open_download=self._open_update_in_browser,
             on_auto_update=self._toggle_auto_update,
             update_status=str(self.storage.get_pref("update_status") or ""),
             pending_update=self.storage.get_pref("pending_update") or {},
@@ -1232,7 +1246,7 @@ class StudyApp(ctk.CTk):
         self.storage.set_pref("ai_calm_mode", not cur)
         try:
             self.toasts.show(
-                "מצב רגוע דולק — סשנים קצרים יותר." if not cur else "מצב רגוע כבוי.",
+                "מצב רגוע דולק - סשנים קצרים יותר." if not cur else "מצב רגוע כבוי.",
                 kind="ok",
             )
         except Exception:
@@ -1265,7 +1279,7 @@ class StudyApp(ctk.CTk):
         # רענון מלא כדי שהתיקון ייראה מיד בכל המסכים
         try:
             self._show_settings()
-            self.toasts.show("עברית עודכנה. אם עדיין הפוך — נסו «תקן עברית» או «תקן אותיות».", kind="ok")
+            self.toasts.show("עברית עודכנה. אם עדיין הפוך - נסו «תקן עברית» או «תקן אותיות».", kind="ok")
         except Exception:
             self._show_settings()
 
@@ -1411,7 +1425,7 @@ class StudyApp(ctk.CTk):
             for key in ALL_SUBJECTS:
                 snap = self.adaptive_engine.snapshot(key)
                 plan = self.adaptive_engine.action_plan(key)
-                # העשרה עם Ollama (רק כאן — לא בנתיב UI רגיל)
+                # העשרה עם Ollama (רק כאן - לא בנתיב UI רגיל)
                 try:
                     from core import ai_tutor
 
@@ -1701,7 +1715,7 @@ class StudyApp(ctk.CTk):
         card.pack(fill="x", pady=(0, 12))
         kicker(inner, "מבחן מימד", bg=COLORS["card_bg"]).pack(anchor="e")
         heading(inner, "ישיבה מלאה בשלושה פרקים", 18).pack(anchor="e", pady=(2, 0))
-        # שורות קצרות — משפט ארוך עם מספרים מתהפך ב־RTL ונראה ג'יבריש
+        # שורות קצרות - משפט ארוך עם מספרים מתהפך ב־RTL ונראה ג'יבריש
         fast_label(
             inner, "מילולי, אנגלית וחשבון. שעון נפרד לכל פרק.",
             size=13, muted=True, bg=COLORS["card_bg"], wrap=720,
@@ -2639,7 +2653,7 @@ class StudyApp(ctk.CTk):
         }.get(self.current_mode, "תרגול")
         self._set_window_title(subject_label(self.current_subject or ""), mode_he)
 
-        # תרגול מחוץ לגלילה — אחרת רווח ריק / גלילה שוברים את הסידור
+        # תרגול מחוץ לגלילה - אחרת רווח ריק / גלילה שוברים את הסידור
         scroll = getattr(self, "scroll", None)
         if scroll is not None:
             try:
@@ -2829,7 +2843,7 @@ class StudyApp(ctk.CTk):
         self._set_window_title("תוצאות", subject_label(subj))
         meta = self._finish_meta(session)
         drill_mode = "compose" if self.current_mode == "compose" else "practice"
-        # סיכום AI אחרי סשן (גם אחרי מבחן — מותר)
+        # סיכום AI אחרי סשן (גם אחרי מבחן - מותר)
         try:
             debrief = self.ai_engine.session_debrief(
                 subject=subj,

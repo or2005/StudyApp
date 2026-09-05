@@ -5,8 +5,11 @@ import json
 import os
 import re
 import shutil
+import ssl
 import sys
 import tempfile
+import time
+import webbrowser
 import zipfile
 from typing import Any, Callable
 from urllib.error import HTTPError, URLError
@@ -23,11 +26,21 @@ log = None
 
 USER_AGENT = (
     f"StudyApp/{VERSION} (+https://github.com/or2005/StudyApp) "
-    "Mozilla/5.0 (compatible; StudyApp-Updater)"
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
+    "(KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36"
 )
 TIMEOUT = 18
-DOWNLOAD_TIMEOUT = 300
+DOWNLOAD_TIMEOUT = 420
 MAX_DOWNLOAD = 450 * 1024 * 1024
+DOWNLOAD_RETRIES = 2
+
+# מראות לקבצי Release כש־github.com / release-assets חסומים (בתי ספר, רשתות).
+_MIRROR_PREFIXES = (
+    "https://cdn.jsdelivr.net/gh/or2005/StudyApp@downloads/",
+    "https://raw.githubusercontent.com/or2005/StudyApp/downloads/",
+    "https://ghfast.top/",
+    "https://mirror.ghproxy.com/",
+)
 
 
 def _log():
@@ -60,10 +73,19 @@ def is_frozen() -> bool:
     return bool(getattr(sys, "frozen", False))
 
 
+def _ssl_context() -> ssl.SSLContext:
+    try:
+        import certifi
+
+        return ssl.create_default_context(cafile=certifi.where())
+    except Exception:
+        return ssl.create_default_context()
+
+
 def _get_json(url: str) -> dict | list | None:
     req = Request(url, headers={"User-Agent": USER_AGENT, "Accept": "application/json"})
     try:
-        with urlopen(req, timeout=TIMEOUT) as resp:
+        with urlopen(req, timeout=TIMEOUT, context=_ssl_context()) as resp:
             raw = resp.read().decode("utf-8", errors="replace")
         return json.loads(raw)
     except (HTTPError, URLError, TimeoutError, json.JSONDecodeError, OSError) as exc:
@@ -113,17 +135,15 @@ def _from_github() -> dict[str, Any] | None:
 def _from_manifest() -> dict[str, Any] | None:
     bundled = os.path.join(BASE_DIR, "docs", "latest.json")
     urls = list(UPDATE_MANIFEST_URLS)
+    local = None
     if os.path.isfile(bundled):
         try:
             with open(bundled, "r", encoding="utf-8") as handle:
                 local = json.load(handle)
-            if isinstance(local, dict) and local.get("version"):
-                # הקובץ המצורף מתאר את הגרסה הנוכחית; ברשת מחפשים חדשה יותר.
-                pass
+            if not (isinstance(local, dict) and local.get("version")):
+                local = None
         except Exception:
             local = None
-    else:
-        local = None
     for url in urls:
         data = _get_json(url)
         if isinstance(data, dict) and data.get("version"):
@@ -137,9 +157,72 @@ def _from_manifest() -> dict[str, Any] | None:
     return None
 
 
+def _collect_urls(blob: dict[str, Any] | None) -> list[str]:
+    if not isinstance(blob, dict):
+        return []
+    keys = (
+        "download",
+        "windows_setup",
+        "windows_zip",
+        "windows_setup_alt",
+        "windows_zip_alt",
+        "linux_portable",
+    )
+    found: list[str] = []
+    for key in keys:
+        url = str(blob.get(key) or "").strip()
+        if url and url not in found:
+            found.append(url)
+    mirrors = blob.get("mirrors")
+    if isinstance(mirrors, list):
+        for item in mirrors:
+            url = str(item or "").strip()
+            if url and url not in found:
+                found.append(url)
+    return found
+
+
+def _merge_remote(github: dict | None, manifest: dict | None) -> dict[str, Any] | None:
+    if not github and not manifest:
+        return None
+    if not github:
+        return dict(manifest or {})
+    out = dict(github)
+    if not manifest:
+        return out
+    for key in (
+        "windows_setup", "windows_zip", "linux_portable", "page", "notes",
+        "windows_setup_alt", "windows_zip_alt",
+    ):
+        if not str(out.get(key) or "").strip() and manifest.get(key):
+            out[key] = manifest[key]
+    # מראות מהמניפסט קודם (CDN), כדי לעקוף חסימות GitHub Releases.
+    mirrors: list[str] = []
+    for url in list(manifest.get("mirrors") or []) + _collect_urls(manifest):
+        url = str(url or "").strip()
+        if url and url not in mirrors:
+            mirrors.append(url)
+    if mirrors:
+        out["mirrors"] = mirrors
+        # אם ב־GitHub יש קבצים אבל הרשת חוסמת, עדיין נשמור אותם כ־alt.
+        if out.get("windows_setup") and not out.get("windows_setup_alt"):
+            out["windows_setup_alt"] = out["windows_setup"]
+        if out.get("windows_zip") and not out.get("windows_zip_alt"):
+            out["windows_zip_alt"] = out["windows_zip"]
+        # העדפה לקישורי CDN מהמניפסט כשקיימים
+        for key in ("windows_setup", "windows_zip"):
+            man_url = str(manifest.get(key) or "").strip()
+            if man_url and ("jsdelivr" in man_url or "raw.githubusercontent" in man_url):
+                out[key] = man_url
+    if manifest.get("version") and not out.get("version"):
+        out["version"] = manifest["version"]
+    out["source"] = f"{out.get('source') or 'github'}+manifest"
+    return out
+
+
 def check_latest(current: str = VERSION) -> dict[str, Any]:
     """בודק אם יש גרסה חדשה. לא מוריד."""
-    remote = _from_github() or _from_manifest()
+    remote = _merge_remote(_from_github(), _from_manifest())
     if not remote:
         return {
             "ok": False,
@@ -169,6 +252,7 @@ def check_latest(current: str = VERSION) -> dict[str, Any]:
         "windows_setup": remote.get("windows_setup") or "",
         "windows_zip": remote.get("windows_zip") or "",
         "linux_portable": remote.get("linux_portable") or "",
+        "mirrors": list(remote.get("mirrors") or []),
         "page": remote.get("page") or "",
         "source": remote.get("source") or "",
         "message": message,
@@ -180,46 +264,129 @@ def preferred_download(info: dict[str, Any]) -> str:
     return urls[0] if urls else ""
 
 
+def _filename_of(url: str) -> str:
+    return url.split("?")[0].rstrip("/").split("/")[-1] or "studyapp-update.bin"
+
+
+def expand_mirrors(url: str) -> list[str]:
+    """מרחיב קישור GitHub למראות CDN / proxy."""
+    url = str(url or "").strip()
+    if not url:
+        return []
+    out = [url]
+    name = _filename_of(url)
+    lower = url.lower()
+    if "github.com" in lower and "/releases/download/" in lower and name:
+        for prefix in _MIRROR_PREFIXES:
+            if prefix.endswith("/"):
+                if "jsdelivr" in prefix or "raw.githubusercontent" in prefix:
+                    alt = prefix + name
+                else:
+                    alt = prefix + url
+            else:
+                alt = prefix + url
+            if alt not in out:
+                out.append(alt)
+    return out
+
+
 def download_candidates(info: dict[str, Any]) -> list[str]:
+    """סדר: מראות CDN קודם (רשתות שחוסמות GitHub), אחר כך setup/zip הרשמיים."""
     if os.name == "nt":
-        # Prefer zip when present: 5.0.0+ ships zip-only (no setup.exe yet).
-        keys = ("download", "windows_zip", "windows_setup")
+        keys = ("download", "windows_setup", "windows_zip", "windows_setup_alt", "windows_zip_alt")
     else:
         keys = ("download", "linux_portable")
-    found: list[str] = []
+    seed: list[str] = []
+    for url in info.get("mirrors") or []:
+        url = str(url or "").strip()
+        if url and url not in seed:
+            seed.append(url)
     for key in keys:
         url = str(info.get(key) or "").strip()
-        if url and url not in found:
-            found.append(url)
+        if url and url not in seed:
+            seed.append(url)
+
+    found: list[str] = []
+    for url in seed:
+        for alt in expand_mirrors(url):
+            if alt not in found:
+                found.append(alt)
     return found
 
 
+def _looks_like_payload(path: str, url: str) -> bool:
+    try:
+        size = os.path.getsize(path)
+    except OSError:
+        return False
+    if size < 64_000:
+        return False
+    try:
+        with open(path, "rb") as handle:
+            magic = handle.read(8)
+    except OSError:
+        return False
+    name = _filename_of(url).lower()
+    if name.endswith(".zip") or magic[:2] == b"PK":
+        return magic[:2] == b"PK"
+    if name.endswith(".exe") or magic[:2] == b"MZ":
+        return magic[:2] == b"MZ"
+    if name.endswith(".gz") or name.endswith(".tgz"):
+        return magic[:2] == b"\x1f\x8b"
+    return True
+
+
 def download_file(url: str, dest: str, on_progress: Callable[[int, int], None] | None = None) -> str:
-    req = Request(
-        url,
-        headers={
-            "User-Agent": USER_AGENT,
-            "Accept": "application/octet-stream,*/*",
-        },
-    )
-    with urlopen(req, timeout=DOWNLOAD_TIMEOUT) as resp:
-        total = int(resp.headers.get("Content-Length") or 0)
-        if total > MAX_DOWNLOAD:
-            raise OSError("קובץ העדכון גדול מדי.")
-        got = 0
-        os.makedirs(os.path.dirname(dest) or ".", exist_ok=True)
-        with open(dest, "wb") as handle:
-            while True:
-                chunk = resp.read(64 * 1024)
-                if not chunk:
-                    break
-                got += len(chunk)
-                if got > MAX_DOWNLOAD:
+    last_exc: Exception | None = None
+    for attempt in range(1, DOWNLOAD_RETRIES + 1):
+        tmp = dest + f".part{attempt}"
+        try:
+            if os.path.isfile(tmp):
+                os.remove(tmp)
+            req = Request(
+                url,
+                headers={
+                    "User-Agent": USER_AGENT,
+                    "Accept": "application/octet-stream,*/*",
+                    "Accept-Language": "he,en;q=0.8",
+                },
+            )
+            with urlopen(req, timeout=DOWNLOAD_TIMEOUT, context=_ssl_context()) as resp:
+                total = int(resp.headers.get("Content-Length") or 0)
+                ctype = str(resp.headers.get("Content-Type") or "").lower()
+                if "text/html" in ctype and total and total < 500_000:
+                    raise OSError("השרת החזיר דף HTML במקום קובץ (כנראה חסימת רשת).")
+                if total > MAX_DOWNLOAD:
                     raise OSError("קובץ העדכון גדול מדי.")
-                handle.write(chunk)
-                if on_progress:
-                    on_progress(got, total)
-    return dest
+                got = 0
+                os.makedirs(os.path.dirname(dest) or ".", exist_ok=True)
+                with open(tmp, "wb") as handle:
+                    while True:
+                        chunk = resp.read(64 * 1024)
+                        if not chunk:
+                            break
+                        got += len(chunk)
+                        if got > MAX_DOWNLOAD:
+                            raise OSError("קובץ העדכון גדול מדי.")
+                        handle.write(chunk)
+                        if on_progress:
+                            on_progress(got, total)
+            if not _looks_like_payload(tmp, url):
+                raise OSError("הקובץ שהתקבל פגום או אינו חבילת StudyApp.")
+            os.replace(tmp, dest)
+            return dest
+        except Exception as exc:
+            last_exc = exc
+            _log().info("download attempt %s failed %s: %s", attempt, url, exc)
+            try:
+                if os.path.isfile(tmp):
+                    os.remove(tmp)
+            except OSError:
+                pass
+            if attempt < DOWNLOAD_RETRIES:
+                time.sleep(1.2 * attempt)
+    assert last_exc is not None
+    raise last_exc
 
 
 def _looks_like_update(path: str) -> str:
@@ -271,22 +438,51 @@ def _zip_root_has_exe(zf: zipfile.ZipFile) -> str:
     return ""
 
 
+def _dir_is_writable(path: str) -> bool:
+    try:
+        os.makedirs(path, exist_ok=True)
+        probe = os.path.join(path, ".studyapp_write_probe")
+        with open(probe, "w", encoding="utf-8") as handle:
+            handle.write("1")
+        os.remove(probe)
+        return True
+    except OSError:
+        return False
+
+
+def _desktop_dir() -> str:
+    home = os.path.expanduser("~")
+    desktop = os.path.join(home, "Desktop")
+    if os.path.isdir(desktop):
+        return desktop
+    return home
+
+
 def _apply_zip(path: str) -> dict[str, Any]:
     if not zipfile.is_zipfile(path):
         return {"ok": False, "message": "ה-ZIP פגום."}
     dest = install_dir()
     if not is_frozen():
         return _extract_and_open(path)
-    staging = os.path.join(os.path.dirname(dest), "StudyApp_update_staging")
+
+    parent = os.path.dirname(dest)
+    staging_root = parent if _dir_is_writable(parent) else os.path.join(
+        os.environ.get("LOCALAPPDATA") or tempfile.gettempdir(), "StudyApp"
+    )
+    staging = os.path.join(staging_root, "StudyApp_update_staging")
     if os.path.isdir(staging):
         shutil.rmtree(staging, ignore_errors=True)
-    os.makedirs(staging, exist_ok=True)
-    with zipfile.ZipFile(path, "r") as zf:
-        if not _zip_root_has_exe(zf) and not any(
-            n.replace("\\", "/").lower().endswith("studyapp.exe") for n in zf.namelist()
-        ):
-            return {"ok": False, "message": "ב-ZIP אין StudyApp.exe."}
-        zf.extractall(staging)
+    try:
+        os.makedirs(staging, exist_ok=True)
+        with zipfile.ZipFile(path, "r") as zf:
+            if not _zip_root_has_exe(zf) and not any(
+                n.replace("\\", "/").lower().endswith("studyapp.exe") for n in zf.namelist()
+            ):
+                return {"ok": False, "message": "ב-ZIP אין StudyApp.exe."}
+            zf.extractall(staging)
+    except OSError as exc:
+        return _extract_to_desktop(path, reason=str(exc))
+
     payload = staging
     inner = os.path.join(staging, "StudyApp")
     if os.path.isdir(inner) and os.path.isfile(os.path.join(inner, "StudyApp.exe")):
@@ -296,15 +492,42 @@ def _apply_zip(path: str) -> dict[str, Any]:
             if "StudyApp.exe" in files:
                 payload = root
                 break
+
+    if not _dir_is_writable(dest):
+        return _extract_to_desktop(path, reason="אין הרשאת כתיבה לתיקיית ההתקנה")
+
     script = _write_swap_script(payload, dest)
     try:
         os.startfile(script)  # noqa: S606
     except Exception as exc:
-        return {"ok": False, "message": f"לא הצלחתי להפעיל את מחליף הקבצים: {exc}"}
+        return _extract_to_desktop(path, reason=str(exc))
     return {
         "ok": True,
         "restart": True,
         "message": "העדכון יותקן אחרי שהחלון ייסגר. התוכנה תיפתח שוב לבד.",
+    }
+
+
+def _extract_to_desktop(path: str, reason: str = "") -> dict[str, Any]:
+    folder = os.path.join(_desktop_dir(), f"StudyApp_{VERSION}_new")
+    if os.path.isdir(folder):
+        shutil.rmtree(folder, ignore_errors=True)
+    os.makedirs(folder, exist_ok=True)
+    with zipfile.ZipFile(path, "r") as zf:
+        zf.extractall(folder)
+    try:
+        os.startfile(folder)  # noqa: S606
+    except Exception:
+        pass
+    hint = f" ({reason})" if reason else ""
+    return {
+        "ok": True,
+        "restart": False,
+        "message": (
+            f"לא ניתן היה להחליף את ההתקנה הקיימת{hint}.\n"
+            f"חולצה תיקייה חדשה לשולחן העבודה:\n{folder}\n"
+            "הפעילו משם את StudyApp.exe. ההתקדמות נשמרת."
+        ),
     }
 
 
@@ -324,12 +547,11 @@ def _extract_and_open(path: str) -> dict[str, Any]:
 
 
 def _open_folder(path: str) -> dict[str, Any]:
-    folder = os.path.dirname(path)
     try:
         if os.name == "nt":
             os.startfile(path)  # noqa: S606
         else:
-            shutil.copy2(path, folder)
+            webbrowser.open(path)
     except Exception as exc:
         return {"ok": False, "message": str(exc)}
     return {"ok": True, "restart": False, "message": "הקובץ נפתח. התקינו אותו ואז פתחו שוב את StudyApp."}
@@ -360,24 +582,42 @@ if exist "{exe}" (
     return bat
 
 
+def open_in_browser(info: dict[str, Any] | None = None) -> str:
+    """פותח קישור הורדה בדפדפן (למקרה שההורדה הפנימית נחסמת)."""
+    info = info or {}
+    url = preferred_download(info) or str(info.get("page") or "").strip()
+    if not url:
+        url = f"https://github.com/{GITHUB_REPO}/releases/latest"
+    try:
+        webbrowser.open(url)
+    except Exception:
+        try:
+            os.startfile(url)  # noqa: S606
+        except Exception:
+            pass
+    return url
+
+
 def download_and_apply(info: dict[str, Any], on_progress=None) -> dict[str, Any]:
     urls = download_candidates(info)
     page = str(info.get("page") or "")
-    if not urls:
-        if page:
-            try:
-                os.startfile(page)  # noqa: S606
-            except Exception:
-                pass
-        from core.i18n import block
+    from core.i18n import block
 
+    if not urls:
+        open_in_browser(info if page else {"page": page})
         return {"ok": False, "message": block("update.no_url")}
     folder = os.path.join(os.environ.get("LOCALAPPDATA") or tempfile.gettempdir(), "StudyApp", "updates")
     os.makedirs(folder, exist_ok=True)
     last_err: Exception | None = None
     for url in urls:
-        name = url.split("?")[0].rstrip("/").split("/")[-1] or "studyapp-update.bin"
-        dest = os.path.join(folder, name)
+        name = _filename_of(url)
+        # שמירה בשם יציב לפי סיומת, בלי query של פרוקסי
+        if name.endswith(".exe"):
+            dest = os.path.join(folder, name if "studyapp" in name.lower() else "StudyApp-setup.exe")
+        elif name.endswith(".zip"):
+            dest = os.path.join(folder, name if "studyapp" in name.lower() else "StudyApp-windows.zip")
+        else:
+            dest = os.path.join(folder, name)
         try:
             download_file(url, dest, on_progress)
         except Exception as exc:
@@ -385,7 +625,7 @@ def download_and_apply(info: dict[str, Any], on_progress=None) -> dict[str, Any]
             _log().info("download failed %s: %s", url, exc)
             continue
         return apply_local_file(dest)
-    from core.i18n import block
 
-    hint = f"\n{block('update.manual')}\n{page}" if page else ""
+    opened = open_in_browser(info)
+    hint = f"\n{block('update.manual')}\n{opened}"
     return {"ok": False, "message": block("update.download_fail", err=last_err) + hint}

@@ -12,6 +12,7 @@ class SettingsScreen(Page):
                  on_font=None, on_export=None, on_import=None, on_logs=None, on_exam_date=None,
                  on_tts=None, tts_on=False, on_clear_reports=None,
                  on_check_update=None, on_install_update=None, on_pick_update=None,
+                 on_open_download=None,
                  on_auto_update=None, update_status="", pending_update=None,
                  on_telemetry=None, telemetry_on=False,
                  profile_name="", profile_names=None,
@@ -161,6 +162,18 @@ class SettingsScreen(Page):
                          command=on_install_update).pack(side="right", padx=6)
         GhostButton(row, text=rtl("התקנה מקובץ"), height=42, width=150,
                     command=on_pick_update).pack(side="right", padx=6)
+        if has_pending and on_open_download:
+            row2 = tk.Frame(updates, bg=COLORS["card_bg"])
+            row2.pack(fill="x", pady=(8, 0))
+            GhostButton(
+                row2, text=rtl("הורדה בדפדפן (אם נתקע)"), height=42, width=220,
+                command=on_open_download,
+            ).pack(side="right", padx=6)
+            fast_label(
+                updates,
+                "אם ההורדה נכשלת ברשת בית ספר: לחצו «הורדה בדפדפן», שמרו את הקובץ, ואז «התקנה מקובץ».",
+                size=12, muted=True, bg=COLORS["card_bg"], wrap=740,
+            ).pack(fill="x", pady=(8, 0))
         self._toggle(
             updates,
             "בדיקה אוטומטית בהפעלה: דולקת" if auto_on else "בדיקה אוטומטית בהפעלה: כבויה",
