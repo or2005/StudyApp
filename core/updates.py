@@ -35,8 +35,8 @@ MAX_DOWNLOAD = 450 * 1024 * 1024
 DOWNLOAD_RETRIES = 2
 
 # מראות לקבצי Release כש־github.com / release-assets חסומים (בתי ספר, רשתות).
+# jsDelivr מחזיר 403 לקבצי exe/zip גדולים — raw.githubusercontent אמין יותר.
 _MIRROR_PREFIXES = (
-    "https://cdn.jsdelivr.net/gh/or2005/StudyApp@downloads/",
     "https://raw.githubusercontent.com/or2005/StudyApp/downloads/",
     "https://ghfast.top/",
     "https://mirror.ghproxy.com/",
@@ -212,7 +212,7 @@ def _merge_remote(github: dict | None, manifest: dict | None) -> dict[str, Any] 
         # העדפה לקישורי CDN מהמניפסט כשקיימים
         for key in ("windows_setup", "windows_zip"):
             man_url = str(manifest.get(key) or "").strip()
-            if man_url and ("jsdelivr" in man_url or "raw.githubusercontent" in man_url):
+            if man_url and ("raw.githubusercontent" in man_url or "jsdelivr" in man_url):
                 out[key] = man_url
     if manifest.get("version") and not out.get("version"):
         out["version"] = manifest["version"]

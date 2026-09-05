@@ -45,7 +45,7 @@ class VersionCompareTests(unittest.TestCase):
                 urls,
             )
             # CDN / raw mirrors expand from GitHub release URLs
-            self.assertTrue(any("jsdelivr" in u or "raw.githubusercontent" in u for u in urls))
+            self.assertTrue(any("raw.githubusercontent" in u or "ghfast" in u or "ghproxy" in u for u in urls))
 
     def test_open_in_browser_returns_url(self):
         url = updates.open_in_browser({
