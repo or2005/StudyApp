@@ -237,13 +237,25 @@ def _merge_remote(github: dict | None, manifest: dict | None) -> dict[str, Any] 
                 out["windows_zip_alt"] = out["windows_zip"]
         for key, suffix in (("windows_setup", "-setup.exe"), ("windows_zip", "-windows.zip")):
             man_url = str((manifest or {}).get(key) or "").strip()
-            if man_url and ("raw.githubusercontent" in man_url or "jsdelivr" in man_url):
+            if (
+                man_url
+                and ("raw.githubusercontent" in man_url or "jsdelivr" in man_url)
+                and (not version or version in man_url)
+            ):
                 out[key] = man_url
                 continue
+            chosen = ""
             for url in mirrors:
-                if "raw.githubusercontent.com" in url and suffix in url:
-                    out[key] = url
+                if "raw.githubusercontent.com" in url and suffix in url and version in url:
+                    chosen = url
                     break
+            if not chosen:
+                for url in mirrors:
+                    if "raw.githubusercontent.com" in url and suffix in url:
+                        chosen = url
+                        break
+            if chosen:
+                out[key] = chosen
     return out
 
 
