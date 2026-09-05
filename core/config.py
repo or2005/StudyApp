@@ -20,7 +20,7 @@ ICON_PATH: Final[str] = os.path.join(ASSETS_DIR, "icon.ico")
 ICON_PNG_PATH: Final[str] = os.path.join(ASSETS_DIR, "icon.png")
 APP_TITLE: Final[str] = "StudyApp"
 APP_NAME: Final[str] = "StudyApp"
-VERSION: Final[str] = "5.0.0"
+VERSION: Final[str] = "5.0.1"
 FONT_FAMILY: Final[str] = "Segoe UI"
 
 DEVELOPER_NAME: Final[str] = "אור דדשב"

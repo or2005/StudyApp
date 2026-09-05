@@ -34,8 +34,14 @@ DOWNLOAD_TIMEOUT = 420
 MAX_DOWNLOAD = 450 * 1024 * 1024
 DOWNLOAD_RETRIES = 2
 
-# מראות מובנות ל־5.0.0 (גם אם latest.json במטמון ישן).
+# מראות מובנות (גם אם latest.json במטמון ישן).
 _BUILTIN_MIRRORS = {
+    "5.0.1": (
+        "https://raw.githubusercontent.com/or2005/StudyApp/downloads/StudyApp-5.0.1-setup.exe",
+        "https://raw.githubusercontent.com/or2005/StudyApp/downloads/StudyApp-5.0.1-windows.zip",
+        "https://github.com/or2005/StudyApp/releases/download/v5.0.1/StudyApp-5.0.1-setup.exe",
+        "https://github.com/or2005/StudyApp/releases/download/v5.0.1/StudyApp-5.0.1-windows.zip",
+    ),
     "5.0.0": (
         "https://raw.githubusercontent.com/or2005/StudyApp/downloads/StudyApp-5.0.0-setup.exe",
         "https://raw.githubusercontent.com/or2005/StudyApp/downloads/StudyApp-5.0.0-windows.zip",

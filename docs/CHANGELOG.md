@@ -1,5 +1,12 @@
 # Changelog
 
+## [5.0.1] - 2026-09-05
+
+### Fixed
+- Update downloads try raw.githubusercontent mirrors when GitHub Releases CDN is blocked
+- Added Windows setup.exe channel and in-app «הורדה בדפדפן» fallback
+- Stale latest.json cache no longer hides working mirror URLs
+
 ## [5.0.0] - 2026-09-04
 
 ### Added
